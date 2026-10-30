@@ -282,9 +282,10 @@
         } else {
           saveBooksToFirebase();
         }
-        render();
       } catch (error) {
         console.error("Erro ao carregar do Firebase:", error);
+      } finally {
+        render();
       }
     }
 
@@ -705,7 +706,7 @@
       const newBook = {
         id: Date.now().toString(),
         title: document.getElementById('fTitle').value,
-        subtitle: document.getElementById('fSubasetitle').value || document.getElementById('fSubtitle').value,
+        subtitle: document.getElementById('fSubtitle').value,
         author: document.getElementById('fAuthor').value,
         category: document.getElementById('fCategory').value,
         year: document.getElementById('fYear').value || '2026',
@@ -849,7 +850,7 @@
 
       setTimeout(() => {
         loadBooksFromFirebase();
-      }, 500);
+      }, 300);
     });
   </script>
 </body>
