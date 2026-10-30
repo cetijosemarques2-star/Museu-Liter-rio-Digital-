@@ -41,6 +41,18 @@
     .flipping {
       transform: rotateY(-90deg);
     }
+    /* Estilização suave para scrollbars horizontais */
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.05);
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #4C6444;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body class="bg-[#E5D7C4] dark:bg-[#0f1715] text-[#102820] dark:text-[#E5D7C4] h-screen overflow-hidden flex flex-col lg:flex-row transition-colors duration-300">
@@ -48,7 +60,7 @@
   <!-- ==========================================
       MENU LATERAL ESQUERDO
       ========================================== -->
-  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-[#102820] dark:bg-[#08120e] text-[#E5D7C4] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl border-r border-[#4C6444]/20">
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-[#102820] dark:bg-[#08120e] text-[#E5D7C4] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl border-r border-[#4C6444]/25">
     <div class="p-6 border-b border-[#4C6444]/40 flex items-center justify-between cursor-pointer shrink-0" onclick="switchTab('home')">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-lg bg-[#4C6444] flex items-center justify-center shadow-md shrink-0">
@@ -182,7 +194,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Disponibilizar funções globalmente para o app
     window.db = db;
     window.dbRef = ref;
     window.dbSet = set;
@@ -260,7 +271,6 @@
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    // Carregar dados do Firebase ao iniciar
     async function loadBooksFromFirebase() {
       try {
         if (!window.db) return;
@@ -269,10 +279,8 @@
         const snapshot = await dbGet(dbRef(window.db, 'books'));
         if (snapshot.exists()) {
           const firebaseBooks = snapshot.val();
-          // Converte objeto do Firebase para array mantendo os padrões
           state.books = Object.values(firebaseBooks);
         } else {
-          // Se o banco estiver vazio, salva os livros padrão iniciais
           saveBooksToFirebase();
         }
         render();
@@ -388,21 +396,21 @@
         if (shelfBooks.length === 0) return '';
 
         let booksCards = shelfBooks.map(book => `
-          <div class="w-60 sm:w-68 lg:w-72 shrink-0 bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl shadow-xl overflow-hidden border border-[#CFBB99]/80 dark:border-[#263830] flex flex-col group hover:shadow-2xl transition duration-300">
-            <div class="relative h-72 sm:h-80 overflow-hidden bg-[#d3c1a5] dark:bg-[#101915]">
+          <div class="w-56 sm:w-64 lg:w-72 shrink-0 bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl shadow-xl overflow-hidden border border-[#CFBB99]/80 dark:border-[#263830] flex flex-col group hover:shadow-2xl transition duration-300">
+            <div class="relative h-64 sm:h-72 lg:h-80 overflow-hidden bg-[#d3c1a5] dark:bg-[#101915]">
               <img src="${escapeHtml(book.coverUrl)}" alt="${escapeHtml(book.title)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
               <div class="absolute top-3 left-3 bg-[#102820]/90 text-[#E5D7C4] text-[10px] sm:text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider">
                 ${escapeHtml(book.category)}
               </div>
             </div>
-            <div class="p-5 flex-1 flex flex-col justify-between">
+            <div class="p-4 sm:p-5 flex-1 flex flex-col justify-between">
               <div>
-                <h3 class="font-serif font-bold text-lg sm:text-xl text-[#102820] dark:text-[#F4ECD8] line-clamp-1">${escapeHtml(book.title)}</h3>
+                <h3 class="font-serif font-bold text-base sm:text-lg lg:text-xl text-[#102820] dark:text-[#F4ECD8] line-clamp-1">${escapeHtml(book.title)}</h3>
                 <p class="text-xs sm:text-sm text-[#8A6240] dark:text-[#bca282] font-medium mt-1 line-clamp-1">${escapeHtml(book.author)}</p>
               </div>
-              <div class="mt-5 pt-3.5 border-t border-[#CFBB99]/50 dark:border-[#263830] flex items-center justify-between">
+              <div class="mt-4 pt-3 border-t border-[#CFBB99]/50 dark:border-[#263830] flex items-center justify-between">
                 <span class="text-xs text-[#889063] font-bold">${escapeHtml(book.year)}</span>
-                <button onclick="openBook('${book.id}')" class="bg-[#4C6444] hover:bg-[#394c33] text-white text-xs sm:text-sm px-4 py-2 rounded-xl font-medium transition shadow">
+                <button onclick="openBook('${book.id}')" class="bg-[#4C6444] hover:bg-[#394c33] text-white text-xs px-3.5 py-2 rounded-xl font-medium transition shadow">
                   Ler Obra
                 </button>
               </div>
@@ -411,15 +419,15 @@
         `).join('');
 
         return `
-          <div class="space-y-4">
+              return `
+          <div class="space-y-4 w-full overflow-hidden">
             <div class="flex items-center justify-between border-b border-[#889063]/30 pb-3">
-               <div class="flex items-center justify-between border-b border-[#889063]/30 pb-3">
-              <h2 class="text-xl sm:text-2xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4] flex items-center space-x-2.5">
-                <span class="w-3 h-3 rounded-full bg-[#4C6444]"></span>
-                <span>${escapeHtml(shelf.title)}</span>
+              <h2 class="text-lg sm:text-2xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4] flex items-center space-x-2.5 truncate pr-2">
+                <span class="w-3 h-3 rounded-full bg-[#4C6444] shrink-0"></span>
+                <span class="truncate">${escapeHtml(shelf.title)}</span>
               </h2>
             </div>
-            <div class="flex space-x-6 overflow-x-auto pb-4 pt-2 scrollbar-thin">
+            <div class="flex space-x-4 sm:space-x-6 overflow-x-auto pb-4 pt-2 custom-scrollbar w-full">
               ${booksCards}
             </div>
           </div>
@@ -427,19 +435,19 @@
       }).join('');
 
       return `
-        <div class="min-h-full flex flex-col pb-28 lg:pb-12">
-          <div class="bg-[#102820] dark:bg-[#070e0b] text-white py-16 lg:py-24 px-6 sm:px-12 flex flex-col items-center justify-center text-center shadow-2xl">
-            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-[#E5D7C4] leading-tight max-w-3xl">
+        <div class="min-h-full flex flex-col pb-28 lg:pb-12 w-full overflow-x-hidden">
+          <div class="bg-[#102820] dark:bg-[#070e0b] text-white py-14 sm:py-20 lg:py-24 px-6 sm:px-12 flex flex-col items-center justify-center text-center shadow-2xl">
+            <h1 class="text-2xl sm:text-4xl lg:text-6xl font-serif font-bold text-[#E5D7C4] leading-tight max-w-3xl">
               “Um lugar para as histórias viverem.”
             </h1>
-            <p class="text-sm sm:text-lg text-[#B3B792] font-light max-w-xl mx-auto mt-4">
+            <p class="text-xs sm:text-base lg:text-lg text-[#B3B792] font-light max-w-xl mx-auto mt-4">
               Explore livros, poemas e memórias que atravessam gerações com elegância e imersão.
             </p>
-            <button onclick="switchTab('catalog')" class="mt-8 bg-[#4C6444] hover:bg-[#5d7954] text-white px-8 py-3.5 rounded-2xl font-medium shadow-xl transition text-sm sm:text-base">
+            <button onclick="switchTab('catalog')" class="mt-8 bg-[#4C6444] hover:bg-[#5d7954] text-white px-7 py-3 rounded-2xl font-medium shadow-xl transition text-sm sm:text-base">
               Explorar Acervo Completo
             </button>
           </div>
-          <div class="py-10 lg:py-16 px-4 sm:px-8 lg:px-16 space-y-12 max-w-[1400px] mx-auto w-full">
+          <div class="py-8 sm:py-12 px-4 sm:px-8 lg:px-16 space-y-10 max-w-[1400px] mx-auto w-full">
             ${shelvesHtml}
           </div>
         </div>
@@ -698,10 +706,10 @@
 
       const newBook = {
         id: Date.now().toString(),
-        title: document.getElementById('fTitle').value,
+        title: documentelement.getElementById('fTitle').value,
         subtitle: document.getElementById('fSubtitle').value,
         author: document.getElementById('fAuthor').value,
-        category: document.element.getElementById('fCategory').value,
+        category: document.getElementById('fCategory').value,
         year: document.getElementById('fYear').value || '2026',
         synopsis: document.getElementById('fSynopsis').value,
         coverUrl: document.getElementById('fCover').value || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
