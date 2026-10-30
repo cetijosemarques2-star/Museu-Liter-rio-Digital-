@@ -114,7 +114,7 @@
         <span id="headerTitle" class="font-serif text-lg font-medium text-white truncate">Página Inicial</span>
       </div>
 
-      <!-- Botão de Alternância de Tema (Modo Escuro / Claro) -->
+      <!-- Botão de Alternância de Tema -->
       <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-[#1b3b30] dark:bg-[#152a23] text-[#B3B792] hover:text-white transition shadow-sm flex items-center justify-center" title="Alternar Modo Escuro/Claro">
         <i id="themeIcon" data-lucide="moon" class="w-5 h-5"></i>
       </button>
@@ -163,10 +163,11 @@
   </div>
 
   <!-- ==========================================
-      SCRIPT DA APLICAÇÃO E FIREBASE
+      SCRIPT DO FIREBASE E APLICAÇÃO
       ========================================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import { getDatabase, ref, set, get, remove, child } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD_CIISlRS5yyjXM26Z07Po7YlNMAq2tdY",
@@ -179,7 +180,15 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    window.firebaseApp = app;
+    const db = getDatabase(app);
+
+    // Disponibilizar funções globalmente para o app
+    window.db = db;
+    window.dbRef = ref;
+    window.dbSet = set;
+    window.dbGet = get;
+    window.dbRemove = remove;
+    window.dbChild = child;
   </script>
 
   <script>
@@ -222,11 +231,11 @@
           category: 'Poesia',
           year: '2026',
           coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600',
-          pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          pdfUrl: '',
           status: 'published',
           featured: true,
           shelf: 'Literatura nordestina',
-          pages: []
+          pages: ["Poema I\n\nNa secura do chão rachado brota a esperança.", "A chuva cai e renova a vida no sertão."]
         }
       ],
       categories: ['Conto', 'Crônica', 'Poesia', 'Literatura nordestina', 'Produção escolar', 'Romance'],
@@ -251,6 +260,40 @@
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
+    // Carregar dados do Firebase ao iniciar
+    async function loadBooksFromFirebase() {
+      try {
+        if (!window.db) return;
+        const dbRef = window.dbRef;
+        const dbGet = window.dbGet;
+        const snapshot = await dbGet(dbRef(window.db, 'books'));
+        if (snapshot.exists()) {
+          const firebaseBooks = snapshot.val();
+          // Converte objeto do Firebase para array mantendo os padrões
+          state.books = Object.values(firebaseBooks);
+        } else {
+          // Se o banco estiver vazio, salva os livros padrão iniciais
+          saveBooksToFirebase();
+        }
+        render();
+      } catch (error) {
+        console.error("Erro ao carregar do Firebase:", error);
+      }
+    }
+
+    async function saveBooksToFirebase() {
+      try {
+        if (!window.db) return;
+        const dbRef = window.dbRef;
+        const dbSet = window.dbSet;
+        const booksObj = {};
+        state.books.forEach(b => { booksObj[b.id] = b; });
+        await dbSet(dbRef(window.db, 'books'), booksObj);
+      } catch (error) {
+        console.error("Erro ao salvar no Firebase:", error);
+      }
+    }
+
     function switchTab(tab) {
       state.activeTab = tab;
       render();
@@ -273,6 +316,11 @@
 
     function toggleDarkMode() {
       state.isDarkMode = !state.isDarkMode;
+      localStorage.setItem('museu_dark', state.isDarkMode);
+      applyTheme();
+    }
+
+    function applyTheme() {
       const htmlElem = document.documentElement;
       const themeIcon = document.getElementById('themeIcon');
       
@@ -365,6 +413,7 @@
         return `
           <div class="space-y-4">
             <div class="flex items-center justify-between border-b border-[#889063]/30 pb-3">
+               <div class="flex items-center justify-between border-b border-[#889063]/30 pb-3">
               <h2 class="text-xl sm:text-2xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4] flex items-center space-x-2.5">
                 <span class="w-3 h-3 rounded-full bg-[#4C6444]"></span>
                 <span>${escapeHtml(shelf.title)}</span>
@@ -469,6 +518,8 @@
       const book = state.books.find(b => b.id === state.selectedBookId);
       if (!book) return `<div class="p-16 text-center">Obra não encontrada. <button onclick="switchTab('catalog')" class="text-[#4C6444] underline">Voltar</button></div>`;
 
+      const hasContent = (book.pdfUrl && book.pdfUrl.length > 5) || (book.pages && book.pages.length > 0);
+
       return `
         <div class="p-6 sm:p-10 lg:p-16 max-w-5xl mx-auto space-y-8 pb-36 lg:pb-16">
           <button onclick="switchTab('catalog')" class="flex items-center space-x-2 text-[#4C6444] dark:text-[#889063] font-medium text-sm hover:underline">
@@ -479,9 +530,15 @@
               <div class="rounded-2xl overflow-hidden shadow-2xl aspect-[3/4] border border-[#CFBB99] dark:border-[#263830] w-52 sm:w-64 md:w-full">
                 <img src="${escapeHtml(book.coverUrl)}" class="w-full h-full object-cover">
               </div>
-              <button onclick="openPdfReader('${escapeHtml(book.id)}')" class="w-full mt-6 flex items-center justify-center space-x-2 bg-[#4C6444] hover:bg-[#394c33] text-white py-3.5 px-6 rounded-2xl font-medium shadow-xl transition">
-                <i data-lucide="book-open" class="w-5 h-5"></i><span>Ler Obra Agora</span>
-              </button>
+              ${hasContent ? `
+                <button onclick="openPdfReader('${escapeHtml(book.id)}')" class="w-full mt-6 flex items-center justify-center space-x-2 bg-[#4C6444] hover:bg-[#394c33] text-white py-3.5 px-6 rounded-2xl font-medium shadow-xl transition">
+                  <i data-lucide="book-open" class="w-5 h-5"></i><span>Ler Obra Agora</span>
+                </button>
+              ` : `
+                <div class="w-full mt-6 text-center text-xs text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 p-3 rounded-2xl">
+                  Conteúdo indisponível para leitura no momento.
+                </div>
+              `}
             </div>
             <div class="md:col-span-2 space-y-5">
               <span class="inline-block bg-[#102820] text-[#E5D7C4] text-xs px-3.5 py-1 rounded-full uppercase tracking-wider">${escapeHtml(book.category)}</span>
@@ -524,7 +581,7 @@
       let cards = state.videos.map(vid => `
         <div class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl overflow-hidden shadow-xl border border-[#CFBB99] dark:border-[#263830] flex flex-col">
           <div class="aspect-video bg-black relative">
-            <iframe src="${escapeHtml(vid.videoUrl)}" class="w-full h-full" allowfullscreen></iframe>
+            <iframe src="${escapeHtml(vid.videoUrl)}" class="w-full h-full" allowfullscreen loading="lazy" title="${escapeHtml(vid.title)}"></iframe>
           </div>
           <div class="p-6 space-y-2">
             <span class="text-xs bg-[#102820] text-[#E5D7C4] px-3 py-0.5 rounded-full font-semibold uppercase">${escapeHtml(vid.category)}</span>
@@ -577,6 +634,8 @@
         </div>
       `).join('');
 
+      let categoriesOptions = state.categories.map(c => `<option value="${escapeHtml(c)}">`).join('');
+
       return `
         <div class="p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto space-y-8 pb-32 lg:pb-12">
           <div class="flex items-center justify-between bg-[#F4EFE6] dark:bg-[#16221d] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830]">
@@ -590,13 +649,16 @@
                 <input id="fTitle" placeholder="Título *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
                 <input id="fSubtitle" placeholder="Subtítulo" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
                 <input id="fAuthor" placeholder="Autor *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
-                <input id="fCategory" placeholder="Categoria (ex: Conto, Poesia) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+                
+                <input list="categoryList" id="fCategory" placeholder="Categoria (ex: Conto, Poesia) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+                <datalist id="categoryList">${categoriesOptions}</datalist>
+
                 <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
                 <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
                 <input id="fCover" placeholder="URL da Capa" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-                <input id="fPdf" placeholder="URL do PDF Original (opcional)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+                <input id="fPdf" placeholder="URL do PDF (opcional)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
                 <textarea id="fPages" placeholder="Páginas em texto (separadas por linhas em branco)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
-                <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow">Salvar Obra</button>
+                <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow">Salvar Obra no Firebase</button>
               </form>
             </div>
             <div class="lg:col-span-2 bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
@@ -629,7 +691,7 @@
       }
     }
 
-    function handleSaveBook(e) {
+    async function handleSaveBook(e) {
       e.preventDefault();
       const rawPages = document.getElementById('fPages').value.trim();
       const pagesArray = rawPages ? rawPages.split(/\n\s*\n/) : ["Página inicial da obra.", "Conteúdo e desenvolvimento.", "Conclusão."];
@@ -639,7 +701,7 @@
         title: document.getElementById('fTitle').value,
         subtitle: document.getElementById('fSubtitle').value,
         author: document.getElementById('fAuthor').value,
-        category: document.getElementById('fCategory').value,
+        category: document.element.getElementById('fCategory').value,
         year: document.getElementById('fYear').value || '2026',
         synopsis: document.getElementById('fSynopsis').value,
         coverUrl: document.getElementById('fCover').value || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
@@ -651,14 +713,16 @@
       };
 
       state.books.unshift(newBook);
-      alert('Obra cadastrada com sucesso!');
+      await saveBooksToFirebase();
+      alert('Obra cadastrada e salva no Firebase com sucesso!');
       document.getElementById('bookForm').reset();
       render();
     }
 
-    function deleteBook(id) {
-      if (confirm('Deseja excluir esta obra do acervo?')) {
+    async function deleteBook(id) {
+      if (confirm('Deseja excluir esta obra do acervo e do banco de dados?')) {
         state.books = state.books.filter(b => b.id !== id);
+        await saveBooksToFirebase();
         render();
       }
     }
@@ -689,7 +753,7 @@
         bodyContainer.innerHTML = `
           <div id="bookPageContainer" class="page-flip w-full h-full max-w-4xl bg-[#F9F3EA] dark:bg-[#141c19] text-[#2c221a] dark:text-[#E5D7C4] p-6 sm:p-16 rounded-2xl shadow-2xl border-l-8 border-[#102820] dark:border-[#263830] flex flex-col justify-between overflow-y-auto">
             <div class="border-b border-[#dcd0bc] dark:border-[#263830] pb-4 mb-6 flex justify-between items-center shrink-0">
-                      <span class="font-serif italic text-sm text-[#8A6240] dark:text-[#bca282] truncate pr-2">${escapeHtml(book.title)}</span>
+              <span class="font-serif italic text-sm text-[#8A6240] dark:text-[#bca282] truncate pr-2">${escapeHtml(book.title)}</span>
               <span class="text-xs text-gray-500 dark:text-gray-400 font-mono shrink-0" id="topPageNum">1</span>
             </div>
 
@@ -771,7 +835,15 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      render();
+      const savedDark = localStorage.getItem('museu_dark');
+      if (savedDark === 'true') {
+        state.isDarkMode = true;
+      }
+      applyTheme();
+
+      setTimeout(() => {
+        loadBooksFromFirebase();
+      }, 500);
     });
   </script>
 </body>
