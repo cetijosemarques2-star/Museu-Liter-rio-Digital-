@@ -228,13 +228,13 @@
     const state = {
       activeTab: 'home',
       isAdminAuth: false,
-      adminSubTab: 'books', // 'books', 'gallery', 'videos', 'categories'
+      adminSubTab: 'books',
       searchTerm: '',
       selectedCategoryFilter: 'all',
       selectedBookId: null,
       currentPage: 1,
       totalPages: 1,
-      isDarkMode: false,
+      isDarkMode: localStorage.getItem('museu_dark') === 'true',
       books: defaultBooks,
       categories: ['Conto', 'Crônica', 'Poesia', 'Literatura nordestina', 'Produção escolar', 'Romance'],
       gallery: [
@@ -259,10 +259,7 @@
 
     async function loadDataFromFirebase() {
       try {
-        if (!window.db) {
-          render();
-          return;
-        }
+        if (!window.db) return;
         const dbRef = window.dbRef;
         const dbGet = window.dbGet;
         
@@ -277,8 +274,6 @@
 
         const vidSnap = await dbGet(dbRef(window.db, 'videos'));
         if (vidSnap.exists()) state.videos = Object.values(vidSnap.val());
-
-        if (!booksSnap.exists()) await saveDataToFirebase();
       } catch (error) {
         console.error("Erro ao carregar do Firebase:", error);
       } finally {
@@ -295,7 +290,6 @@
         const booksObj = {};
         state.books.forEach(b => { booksObj[b.id] = b; });
         await dbSet(dbRef(window.db, 'books'), booksObj);
-
         await dbSet(dbRef(window.db, 'categories'), state.categories);
 
         const galObj = {};
@@ -700,7 +694,7 @@
               <datalist id="categoryList">${categoriesOptions}</datalist>
 
               <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-              <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+              <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border bborder-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
               <input id="fCover" placeholder="URL da Capa da Obra" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
               <input id="fPdf" placeholder="URL do PDF (Leitor embutido)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
               <input id="fExternalLink" placeholder="Link externo (Música, Documento, Drive)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
@@ -1050,16 +1044,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const savedDark = localStorage.getItem('museu_dark');
-      if (savedDark === 'true') {
-        state.isDarkMode = true;
-      }
       applyTheme();
-
       render();
       setTimeout(() => {
         loadDataFromFirebase();
-      }, 200);
+      }, 150);
     });
   </script>
 </body>
