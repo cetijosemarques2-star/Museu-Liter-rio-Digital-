@@ -202,6 +202,43 @@
   </script>
 
   <script>
+    const defaultBooks = [
+      {
+        id: '1',
+        title: 'Crônicas da Terra Vermelha',
+        subtitle: 'Memórias e paisagens do interior',
+        author: 'Mariana Silva',
+        synopsis: 'Uma coletânea sensível de crônicas sobre a infância no interior, os cheiros da terra molhada, as tardes de outono e a sabedoria dos antigos.',
+        category: 'Crônica',
+        year: '2025',
+        coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
+        pdfUrl: '',
+        status: 'published',
+        featured: true,
+        shelf: 'Crônicas',
+        pages: [
+          "Capítulo I\n\nA terra vermelha guardava os segredos das primeiras chuvas de novembro. Quando o cheiro de mato molhado subia pelo vale, sabíamos que o tempo havia mudado de ritmo.",
+          "As tardes eram longas na varanda da casa de vó. Entre um gole de café coado na hora e histórias contadas à sombra da mangueira, o mundo lá fora parecia distante e seguro.",
+          "Hoje, mesmo longe daquela paisagem, basta fechar os olhos para ouvir o vento balançar os cafezais. As raízes que lá deixamos continuam a nutrir quem somos."
+        ]
+      },
+      {
+        id: '2',
+        title: 'Versos do Sertão Verde',
+        subtitle: 'Poesia popular e contemporânea',
+        author: 'Antônio Bezerra',
+        synopsis: 'Poemas que cantam a força da caatinga, a resiliência do povo nordestino e a beleza das chuvas que transformam a paisagem.',
+        category: 'Poesia',
+        year: '2026',
+        coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600',
+        pdfUrl: '',
+        status: 'published',
+        featured: true,
+        shelf: 'Literatura nordestina',
+        pages: ["Poema I\n\nNa secura do chão rachado brota a esperança.", "A chuva cai e renova a vida no sertão."]
+      }
+    ];
+
     const state = {
       activeTab: 'home',
       isAdminAuth: false,
@@ -211,43 +248,7 @@
       currentPage: 1,
       totalPages: 1,
       isDarkMode: false,
-      
-      books: [
-        {
-          id: '1',
-          title: 'Crônicas da Terra Vermelha',
-          subtitle: 'Memórias e paisagens do interior',
-          author: 'Mariana Silva',
-          synopsis: 'Uma coletânea sensível de crônicas sobre a infância no interior, os cheiros da terra molhada, as tardes de outono e a sabedoria dos antigos.',
-          category: 'Crônica',
-          year: '2025',
-          coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
-          pdfUrl: '',
-          status: 'published',
-          featured: true,
-          shelf: 'Crônicas',
-          pages: [
-            "Capítulo I\n\nA terra vermelha guardava os segredos das primeiras chuvas de novembro. Quando o cheiro de mato molhado subia pelo vale, sabíamos que o tempo havia mudado de ritmo.",
-            "As tardes eram longas na varanda da casa de vó. Entre um gole de café coado na hora e histórias contadas à sombra da mangueira, o mundo lá fora parecia distante e seguro.",
-            "Hoje, mesmo longe daquela paisagem, basta fechar os olhos para ouvir o vento balançar os cafezais. As raízes que lá deixamos continuam a nutrir quem somos."
-          ]
-        },
-        {
-          id: '2',
-          title: 'Versos do Sertão Verde',
-          subtitle: 'Poesia popular e contemporânea',
-          author: 'Antônio Bezerra',
-          synopsis: 'Poemas que cantam a força da caatinga, a resiliência do povo nordestino e a beleza das chuvas que transformam a paisagem.',
-          category: 'Poesia',
-          year: '2026',
-          coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600',
-          pdfUrl: '',
-          status: 'published',
-          featured: true,
-          shelf: 'Literatura nordestina',
-          pages: ["Poema I\n\nNa secura do chão rachado brota a esperança.", "A chuva cai e renova a vida no sertão."]
-        }
-      ],
+      books: defaultBooks,
       categories: ['Conto', 'Crônica', 'Poesia', 'Literatura nordestina', 'Produção escolar', 'Romance'],
       gallery: [
         { id: '1', title: 'Oficina de Contação de Histórias', description: 'Alunos reunidos na biblioteca ao ar livre compartilhando leituras.', imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80&w=1200', date: 'Agosto, 2026', project: 'Festival' },
@@ -272,7 +273,10 @@
 
     async function loadBooksFromFirebase() {
       try {
-        if (!window.db) return;
+        if (!window.db) {
+          render();
+          return;
+        }
         const dbRef = window.dbRef;
         const dbGet = window.dbGet;
         const snapshot = await dbGet(dbRef(window.db, 'books'));
@@ -280,7 +284,7 @@
           const firebaseBooks = snapshot.val();
           state.books = Object.values(firebaseBooks);
         } else {
-          saveBooksToFirebase();
+          await saveBooksToFirebase();
         }
       } catch (error) {
         console.error("Erro ao carregar do Firebase:", error);
@@ -480,7 +484,7 @@
     }
 
     function getFilteredBooksHTML() {
-      const termo = state.searchTerm.trim().toLowerCase();
+      const termo = (state.searchTerm || '').trim().toLowerCase();
 
       let filtered = state.books.filter(b => b.status === 'published')
         .filter(b => state.selectedCategoryFilter === 'all' || b.category === state.selectedCategoryFilter)
@@ -523,7 +527,7 @@
 
     function renderBookDetail() {
       const book = state.books.find(b => b.id === state.selectedBookId);
-      if (!book) return `<div class="p-16 text-center">Obra não encontrada. <button onclick="switchTab('catalog')" class="text-[#4C6444] underline">Voltar</button></div>`;
+      if (!book) return `<div class="p-16 text-center text-[#102820] dark:text-[#E5D7C4]">Obra não encontrada. <button onclick="switchTab('catalog')" class="text-[#4C6444] underline">Voltar</button></div>`;
 
       const hasContent = (book.pdfUrl && book.pdfUrl.length > 5) || (book.pages && book.pages.length > 0);
 
@@ -848,9 +852,10 @@
       }
       applyTheme();
 
+      render();
       setTimeout(() => {
         loadBooksFromFirebase();
-      }, 300);
+      }, 200);
     });
   </script>
 </body>
