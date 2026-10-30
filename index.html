@@ -213,6 +213,7 @@
         year: '2025',
         coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
         pdfUrl: '',
+        externalLink: '',
         status: 'published',
         featured: true,
         shelf: 'Crônicas',
@@ -221,27 +222,13 @@
           "As tardes eram longas na varanda da casa de vó. Entre um gole de café coado na hora e histórias contadas à sombra da mangueira, o mundo lá fora parecia distante e seguro.",
           "Hoje, mesmo longe daquela paisagem, basta fechar os olhos para ouvir o vento balançar os cafezais. As raízes que lá deixamos continuam a nutrir quem somos."
         ]
-      },
-      {
-        id: '2',
-        title: 'Versos do Sertão Verde',
-        subtitle: 'Poesia popular e contemporânea',
-        author: 'Antônio Bezerra',
-        synopsis: 'Poemas que cantam a força da caatinga, a resiliência do povo nordestino e a beleza das chuvas que transformam a paisagem.',
-        category: 'Poesia',
-        year: '2026',
-        coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600',
-        pdfUrl: '',
-        status: 'published',
-        featured: true,
-        shelf: 'Literatura nordestina',
-        pages: ["Poema I\n\nNa secura do chão rachado brota a esperança.", "A chuva cai e renova a vida no sertão."]
       }
     ];
 
     const state = {
       activeTab: 'home',
       isAdminAuth: false,
+      adminSubTab: 'books', // 'books', 'gallery', 'videos', 'categories'
       searchTerm: '',
       selectedCategoryFilter: 'all',
       selectedBookId: null,
@@ -251,8 +238,7 @@
       books: defaultBooks,
       categories: ['Conto', 'Crônica', 'Poesia', 'Literatura nordestina', 'Produção escolar', 'Romance'],
       gallery: [
-        { id: '1', title: 'Oficina de Contação de Histórias', description: 'Alunos reunidos na biblioteca ao ar livre compartilhando leituras.', imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80&w=1200', date: 'Agosto, 2026', project: 'Festival' },
-        { id: '2', title: 'Exposição de Poesia Visual', description: 'Trabalhos artísticos desenvolvidos pelas turmas do ensino médio.', imageUrl: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&q=80&w=1200', date: 'Setembro, 2026', project: 'Mostra Cultural' }
+        { id: '1', title: 'Oficina de Contação de Histórias', description: 'Alunos reunidos na biblioteca ao ar livre compartilhando leituras.', imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80&w=1200', date: 'Agosto, 2026', project: 'Festival' }
       ],
       videos: [
         { id: '1', title: 'Documentário: Vozes da Terra', description: 'Panorama sobre literatura oral e contadores de causos.', videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', category: 'Documentário' }
@@ -271,7 +257,7 @@
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    async function loadBooksFromFirebase() {
+    async function loadDataFromFirebase() {
       try {
         if (!window.db) {
           render();
@@ -279,13 +265,20 @@
         }
         const dbRef = window.dbRef;
         const dbGet = window.dbGet;
-        const snapshot = await dbGet(dbRef(window.db, 'books'));
-        if (snapshot.exists()) {
-          const firebaseBooks = snapshot.val();
-          state.books = Object.values(firebaseBooks);
-        } else {
-          await saveBooksToFirebase();
-        }
+        
+        const booksSnap = await dbGet(dbRef(window.db, 'books'));
+        if (booksSnap.exists()) state.books = Object.values(booksSnap.val());
+
+        const catSnap = await dbGet(dbRef(window.db, 'categories'));
+        if (catSnap.exists()) state.categories = catSnap.val();
+
+        const galSnap = await dbGet(dbRef(window.db, 'gallery'));
+        if (galSnap.exists()) state.gallery = Object.values(galSnap.val());
+
+        const vidSnap = await dbGet(dbRef(window.db, 'videos'));
+        if (vidSnap.exists()) state.videos = Object.values(vidSnap.val());
+
+        if (!booksSnap.exists()) await saveDataToFirebase();
       } catch (error) {
         console.error("Erro ao carregar do Firebase:", error);
       } finally {
@@ -293,14 +286,25 @@
       }
     }
 
-    async function saveBooksToFirebase() {
+    async function saveDataToFirebase() {
       try {
         if (!window.db) return;
         const dbRef = window.dbRef;
         const dbSet = window.dbSet;
+        
         const booksObj = {};
         state.books.forEach(b => { booksObj[b.id] = b; });
         await dbSet(dbRef(window.db, 'books'), booksObj);
+
+        await dbSet(dbRef(window.db, 'categories'), state.categories);
+
+        const galObj = {};
+        state.gallery.forEach(g => { galObj[g.id] = g; });
+        await dbSet(dbRef(window.db, 'gallery'), galObj);
+
+        const vidObj = {};
+        state.videos.forEach(v => { vidObj[v.id] = v; });
+        await dbSet(dbRef(window.db, 'videos'), vidObj);
       } catch (error) {
         console.error("Erro ao salvar no Firebase:", error);
       }
@@ -529,7 +533,7 @@
       const book = state.books.find(b => b.id === state.selectedBookId);
       if (!book) return `<div class="p-16 text-center text-[#102820] dark:text-[#E5D7C4]">Obra não encontrada. <button onclick="switchTab('catalog')" class="text-[#4C6444] underline">Voltar</button></div>`;
 
-      const hasContent = (book.pdfUrl && book.pdfUrl.length > 5) || (book.pages && book.pages.length > 0);
+      const hasContent = (book.pdfUrl && book.pdfUrl.length > 5) || (book.pages && book.pages.length > 0) || (book.externalLink && book.externalLink.length > 5);
 
       return `
         <div class="p-6 sm:p-10 lg:p-16 max-w-5xl mx-auto space-y-8 pb-36 lg:pb-16">
@@ -542,7 +546,12 @@
                 <img src="${escapeHtml(book.coverUrl)}" class="w-full h-full object-cover">
               </div>
               ${hasContent ? `
-                <button onclick="openPdfReader('${escapeHtml(book.id)}')" class="w-full mt-6 flex items-center justify-center space-x-2 bg-[#4C6444] hover:bg-[#394c33] text-white py-3.5 px-6 rounded-2xl font-medium shadow-xl transition">
+                ${book.externalLink && book.externalLink.length > 5 ? `
+                  <a href="${escapeHtml(book.externalLink)}" target="_blank" class="w-full mt-4 flex items-center justify-center space-x-2 bg-[#889063] hover:bg-[#6f764e] text-white py-3 px-6 rounded-2xl font-medium shadow-xl transition text-sm">
+                    <i data-lucide="external-link" class="w-4 h-4"></i><span>Acessar Link Externo</span>
+                  </a>
+                ` : ''}
+                <button onclick="openPdfReader('${escapeHtml(book.id)}')" class="w-full mt-3 flex items-center justify-center space-x-2 bg-[#4C6444] hover:bg-[#394c33] text-white py-3.5 px-6 rounded-2xl font-medium shadow-xl transition">
                   <i data-lucide="book-open" class="w-5 h-5"></i><span>Ler Obra Agora</span>
                 </button>
               ` : `
@@ -618,6 +627,11 @@
       `;
     }
 
+    function setAdminSubTab(subTab) {
+      state.adminSubTab = subTab;
+      render();
+    }
+
     function renderAdmin() {
       if (!state.isAdminAuth) {
         return `
@@ -628,18 +642,44 @@
               <p class="text-xs text-[#4D2D18] dark:text-[#bca282]">Insira a chave de acesso administrativo</p>
             </div>
             <form onsubmit="handleAdminLogin(event)" class="space-y-4">
-              <input id="adminPassInput" type="password" placeholder="Senha..." class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-2xl px-4 py-3 text-sm focus:outline-none" required>
+              <input id="adminPassInput" type="password" placeholder="Senha (admin123)..." class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-2xl px-4 py-3 text-sm focus:outline-none" required>
               <button type="submit" class="w-full bg-[#102820] dark:bg-[#20362e] text-white py-3 rounded-2xl font-medium text-sm shadow-lg">Entrar</button>
             </form>
           </div>
         `;
       }
 
+      let subTabContent = '';
+      if (state.adminSubTab === 'books') subTabContent = renderAdminBooks();
+      else if (state.adminSubTab === 'gallery') subTabContent = renderAdminGallery();
+      else if (state.adminSubTab === 'videos') subTabContent = renderAdminVideos();
+      else if (state.adminSubTab === 'categories') subTabContent = renderAdminCategories();
+
+      return `
+        <div class="p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto space-y-8 pb-32 lg:pb-12">
+          <div class="flex items-center justify-between bg-[#F4EFE6] dark:bg-[#16221d] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830]">
+            <span class="text-sm font-bold text-[#102820] dark:text-[#E5D7C4]">Painel Administrativo Geral</span>
+            <button onclick="state.isAdminAuth=false; render();" class="text-xs text-red-700 dark:text-red-300 font-semibold px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30">Sair</button>
+          </div>
+
+          <div class="flex items-center space-x-3 overflow-x-auto pb-2 border-b border-[#CFBB99]/50 dark:border-[#263830]">
+            <button onclick="setAdminSubTab('books')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${state.adminSubTab === 'books' ? 'bg-[#102820] dark:bg-[#20362e] text-white shadow' : 'bg-[#F4EFE6] dark:bg-[#16221d] text-[#4D2D18] dark:text-[#d1bfa7]'}">Gerenciar Livros</button>
+            <button onclick="setAdminSubTab('gallery')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${state.adminSubTab === 'gallery' ? 'bg-[#102820] dark:bg-[#20362e] text-white shadow' : 'bg-[#F4EFE6] dark:bg-[#16221d] text-[#4D2D18] dark:text-[#d1bfa7]'}">Gerenciar Fotografias</button>
+            <button onclick="setAdminSubTab('videos')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${state.adminSubTab === 'videos' ? 'bg-[#102820] dark:bg-[#20362e] text-white shadow' : 'bg-[#F4EFE6] dark:bg-[#16221d] text-[#4D2D18] dark:text-[#d1bfa7]'}">Gerenciar Vídeos</button>
+            <button onclick="setAdminSubTab('categories')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${state.adminSubTab === 'categories' ? 'bg-[#102820] dark:bg-[#20362e] text-white shadow' : 'bg-[#F4EFE6] dark:bg-[#16221d] text-[#4D2D18] dark:text-[#d1bfa7]'}">Gerenciar Categorias</button>
+          </div>
+
+          ${subTabContent}
+        </div>
+      `;
+    }
+
+    function renderAdminBooks() {
       let booksList = state.books.map(b => `
         <div class="bg-white dark:bg-[#101915] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830] flex items-center justify-between shadow-sm">
           <div class="pr-2 min-w-0">
             <h4 class="font-serif font-bold text-sm text-[#102820] dark:text-[#F4ECD8] truncate">${escapeHtml(b.title)}</h4>
-            <p class="text-xs text-[#8A6240] dark:text-[#bca282] truncate">${escapeHtml(b.author)} • ${escapeHtml(b.category)}</p>
+            <p class="text-xs text-[#8A6240] dark:text-[#bca282] truncate">${escapeHtml(b.author)} • <span class="text-[#4C6444] font-semibold">${escapeHtml(b.category)}</span></p>
           </div>
           <button onclick="deleteBook('${escapeHtml(b.id)}')" class="p-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-xl shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
         </div>
@@ -648,47 +688,129 @@
       let categoriesOptions = state.categories.map(c => `<option value="${escapeHtml(c)}">`).join('');
 
       return `
-        <div class="p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto space-y-8 pb-32 lg:pb-12">
-          <div class="flex items-center justify-between bg-[#F4EFE6] dark:bg-[#16221d] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830]">
-            <span class="text-sm font-bold text-[#102820] dark:text-[#E5D7C4]">Painel Administrativo</span>
-            <button onclick="state.isAdminAuth=false; render();" class="text-xs text-red-700 dark:text-red-300 font-semibold">Sair</button>
-          </div>
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
-              <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Obra</h3>
-              <form id="bookForm" onsubmit="handleSaveBook(event)" class="space-y-3">
-                <input id="fTitle" placeholder="Título *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
-                <input id="fSubtitle" placeholder="Subtítulo" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-                <input id="fAuthor" placeholder="Autor *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
-                
-                <input list="categoryList" id="fCategory" placeholder="Categoria (ex: Conto, Poesia) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
-                <datalist id="categoryList">${categoriesOptions}</datalist>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Nova Obra / Livro</h3>
+            <form id="bookForm" onsubmit="handleSaveBook(event)" class="space-y-3">
+              <input id="fTitle" placeholder="Título da Obra *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              <input id="fSubtitle" placeholder="Subtítulo" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <input id="fAuthor" placeholder="Autor *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              
+              <input list="categoryList" id="fCategory" placeholder="Categoria / Gênero (ex: Poesia, Conto) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              <datalist id="categoryList">${categoriesOptions}</datalist>
 
-                <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-                <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
-                <input id="fCover" placeholder="URL da Capa" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-                <input id="fPdf" placeholder="URL do PDF (opcional)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-                <textarea id="fPages" placeholder="Páginas em texto (separadas por linhas em branco)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
-                <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow">Salvar Obra no Firebase</button>
-              </form>
-            </div>
-            <div class="lg:col-span-2 bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
-              <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Obras Cadastradas</h3>
-              <div class="space-y-3 max-h-[500px] overflow-y-auto">${booksList}</div>
-            </div>
+              <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+              <input id="fCover" placeholder="URL da Capa da Obra" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <input id="fPdf" placeholder="URL do PDF (Leitor embutido)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <input id="fExternalLink" placeholder="Link externo (Música, Documento, Drive)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              
+              <div class="flex items-center space-x-2 pt-1">
+                <input type="checkbox" id="fFeatured" class="rounded text-[#4C6444] focus:ring-[#4C6444]">
+                <label for="fFeatured" class="text-xs text-[#4D2D18] dark:text-[#d1bfa7]">Destacar na Página Inicial</label>
+              </div>
+
+              <textarea id="fPages" placeholder="Páginas em texto (separadas por linhas em branco)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+              <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow hover:bg-[#394c33]">Salvar Obra no Sistema & Firebase</button>
+            </form>
+          </div>
+          <div class="lg:col-span-2 bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Obras Cadastradas (${state.books.length})</h3>
+            <div class="space-y-3 max-h-[500px] overflow-y-auto">${booksList}</div>
           </div>
         </div>
       `;
     }
 
-    function openBook(id) {
-      state.selectedBookId = id;
-      switchTab('book-detail');
+    function renderAdminGallery() {
+      let galleryList = state.gallery.map(g => `
+        <div class="bg-white dark:bg-[#101915] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830] flex items-center justify-between shadow-sm">
+          <div class="flex items-center space-x-3 pr-2 min-w-0">
+            <img src="${escapeHtml(g.imageUrl)}" class="w-12 h-12 rounded-xl object-cover shrink-0">
+            <div class="min-w-0">
+              <h4 class="font-serif font-bold text-sm text-[#102820] dark:text-[#F4ECD8] truncate">${escapeHtml(g.title)}</h4>
+              <p class="text-xs text-[#8A6240] dark:text-[#bca282] truncate">${escapeHtml(g.date)} • ${escapeHtml(g.project)}</p>
+            </div>
+          </div>
+          <button onclick="deleteGalleryItem('${escapeHtml(g.id)}')" class="p-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-xl shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Fotografia</h3>
+            <form id="galleryForm" onsubmit="handleSaveGallery(event)" class="space-y-3">
+              <input id="gTitle" placeholder="Título da Foto *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              <input id="gImageUrl" placeholder="URL da Imagem *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              <input id="gDate" placeholder="Data (ex: Outubro, 2026)" value="Outubro, 2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <input id="gProject" placeholder="Projeto / Categoria (ex: Mostra)" value="Mostra" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <textarea id="gDesc" placeholder="Descrição da foto" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+              <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow">Salvar Fotografia</button>
+            </form>
+          </div>
+          <div class="lg:col-span-2 bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Fotografias Cadastradas (${state.gallery.length})</h3>
+            <div class="space-y-3 max-h-[500px] overflow-y-auto">${galleryList}</div>
+          </div>
+        </div>
+      `;
     }
 
-    function setCategoryFilter(cat) {
-      state.selectedCategoryFilter = cat;
-      render();
+    function renderAdminVideos() {
+      let videosList = state.videos.map(v => `
+        <div class="bg-white dark:bg-[#101915] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830] flex items-center justify-between shadow-sm">
+          <div class="pr-2 min-w-0">
+            <h4 class="font-serif font-bold text-sm text-[#102820] dark:text-[#F4ECD8] truncate">${escapeHtml(v.title)}</h4>
+            <p class="text-xs text-[#8A6240] dark:text-[#bca282] truncate">${escapeHtml(v.category)}</p>
+          </div>
+          <button onclick="deleteVideoItem('${escapeHtml(v.id)}')" class="p-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-xl shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Vídeo</h3>
+            <form id="videoForm" onsubmit="handleSaveVideo(event)" class="space-y-3">
+              <input id="vTitle" placeholder="Título do Vídeo *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              <input id="vUrl" placeholder="URL do YouTube Embed (ex: https://www.youtube.com/embed/...) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              <input id="vCategory" placeholder="Categoria (ex: Documentário)" value="Documentário" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <textarea id="vDesc" placeholder="Descrição do vídeo" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+              <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow">Salvar Vídeo</button>
+            </form>
+          </div>
+          <div class="lg:col-span-2 bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Vídeos Cadastrados (${state.videos.length})</h3>
+            <div class="space-y-3 max-h-[500px] overflow-y-auto">${videosList}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAdminCategories() {
+      let categoriesList = state.categories.map(c => `
+        <div class="bg-white dark:bg-[#101915] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830] flex items-center justify-between shadow-sm">
+          <span class="font-serif font-bold text-sm text-[#102820] dark:text-[#F4ECD8]">${escapeHtml(c)}</span>
+          <button onclick="deleteCategory('${escapeHtml(c)}')" class="p-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-xl shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Adicionar Nova Categoria / Gênero</h3>
+            <form id="categoryForm" onsubmit="handleSaveCategory(event)" class="space-y-3">
+              <input id="cName" placeholder="Nome da Categoria (ex: Ensaio) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow">Adicionar Categoria</button>
+            </form>
+          </div>
+          <div class="lg:col-span-2 bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Categorias Existentes (${state.categories.length})</h3>
+            <div class="space-y-3 max-h-[500px] overflow-y-auto">${categoriesList}</div>
+          </div>
+        </div>
+      `;
     }
 
     function handleAdminLogin(e) {
@@ -698,7 +820,7 @@
         state.isAdminAuth = true;
         render();
       } else {
-        alert('Senha incorreta!');
+        alert('Senha incorreta! Use: admin123');
       }
     }
 
@@ -717,25 +839,107 @@
         synopsis: document.getElementById('fSynopsis').value,
         coverUrl: document.getElementById('fCover').value || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
         pdfUrl: document.getElementById('fPdf').value.trim(),
+        externalLink: document.getElementById('fExternalLink').value.trim(),
         status: 'published',
-        featured: true,
-        shelf: 'Novas publicações',
+        featured: document.getElementById('fFeatured').checked,
+        shelf: document.getElementById('fFeatured').checked ? 'Obras em destaque' : 'Novas publicações',
         pages: pagesArray
       };
 
       state.books.unshift(newBook);
-      await saveBooksToFirebase();
-      alert('Obra cadastrada e salva no Firebase com sucesso!');
+      await saveDataToFirebase();
+      alert('Obra cadastrada e salva com sucesso!');
       document.getElementById('bookForm').reset();
       render();
     }
 
     async function deleteBook(id) {
-      if (confirm('Deseja excluir esta obra do acervo e do banco de dados?')) {
+      if (confirm('Deseja excluir esta obra do acervo?')) {
         state.books = state.books.filter(b => b.id !== id);
-        await saveBooksToFirebase();
+        await saveDataToFirebase();
         render();
       }
+    }
+
+    async function handleSaveGallery(e) {
+      e.preventDefault();
+      const newItem = {
+        id: Date.now().toString(),
+        title: document.getElementById('gTitle').value,
+        imageUrl: document.getElementById('gImageUrl').value,
+        date: document.getElementById('gDate').value,
+        project: document.getElementById('gProject').value,
+        description: document.getElementById('gDesc').value
+      };
+      state.gallery.unshift(newItem);
+      await saveDataToFirebase();
+      alert('Fotografia cadastrada com sucesso!');
+      document.getElementById('galleryForm').reset();
+      render();
+    }
+
+    async function deleteGalleryItem(id) {
+      if (confirm('Deseja excluir esta foto?')) {
+        state.gallery = state.gallery.filter(g => g.id !== id);
+        await saveDataToFirebase();
+        render();
+      }
+    }
+
+    async function handleSaveVideo(e) {
+      e.preventDefault();
+      const newItem = {
+        id: Date.now().toString(),
+        title: document.getElementById('vTitle').value,
+        videoUrl: document.getElementById('vUrl').value,
+        category: document.getElementById('vCategory').value,
+        description: document.getElementById('vDesc').value
+      };
+      state.videos.unshift(newItem);
+      await saveDataToFirebase();
+      alert('Vídeo cadastrado com sucesso!');
+      document.getElementById('videoForm').reset();
+      render();
+    }
+
+    async function deleteVideoItem(id) {
+      if (confirm('Deseja excluir este vídeo?')) {
+        state.videos = state.videos.filter(v => v.id !== id);
+        await saveDataToFirebase();
+        render();
+      }
+    }
+
+    async function handleSaveCategory(e) {
+      e.preventDefault();
+      const catName = document.getElementById('cName').value.trim();
+      if (catName && !state.categories.includes(catName)) {
+        state.categories.push(catName);
+        await saveDataToFirebase();
+        alert('Categoria adicionada com sucesso!');
+        document.getElementById('categoryForm').reset();
+        render();
+      } else {
+        alert('Categoria já existe ou está vazia.');
+      }
+    }
+
+    async function deleteCategory(catName) {
+      if (confirm(`Deseja excluir a categoria "${catName}"?`)) {
+        state.categories = state.categories.filter(c => c !== catName);
+        await saveDataToFirebase();
+        render();
+      }
+    }
+
+    function openBook(id) {
+      state.selectedBookId = id;
+      switchTab('book-detail');
+    }
+
+    function setCategoryFilter(cat) {
+      state.selectedCategoryFilter = cat;
+      render();
     }
 
     function openPdfReader(bookId) {
@@ -854,7 +1058,7 @@
 
       render();
       setTimeout(() => {
-        loadBooksFromFirebase();
+        loadDataFromFirebase();
       }, 200);
     });
   </script>
