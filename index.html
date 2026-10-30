@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Museu Literário Digital</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  
+  <!-- Google Fonts: Cormorant Garamond & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .font-serif {
+      font-family: 'Cormorant Garamond', serif;
+    }
+    .page-container {
+      perspective: 2000px;
+    }
+    .page-flip {
+      transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+      transform-style: preserve-3d;
+      transform-origin: left center;
+      backface-visibility: hidden;
+    }
+    .flipping {
+      transform: rotateY(-90deg);
+    }
+  </style>
+</head>
+<body class="bg-[#E5D7C4] dark:bg-[#0f1715] text-[#102820] dark:text-[#E5D7C4] h-screen overflow-hidden flex flex-col lg:flex-row transition-colors duration-300">
+
+  <!-- ==========================================
+      MENU LATERAL ESQUERDO
+      ========================================== -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-[#102820] dark:bg-[#08120e] text-[#E5D7C4] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl border-r border-[#4C6444]/20">
+    <div class="p-6 border-b border-[#4C6444]/40 flex items-center justify-between cursor-pointer shrink-0" onclick="switchTab('home')">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-[#4C6444] flex items-center justify-center shadow-md shrink-0">
+          <i data-lucide="book-open" class="w-6 h-6 text-[#E5D7C4]"></i>
+        </div>
+        <div>
+          <h1 class="font-serif text-lg font-bold tracking-wide text-white leading-tight">Museu Literário</h1>
+          <p class="text-[10px] text-[#B3B792] tracking-wider uppercase">Digital & Cultural</p>
+        </div>
+      </div>
+      <button onclick="toggleMobileMenu()" class="lg:hidden text-[#B3B792] hover:text-white p-1">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+    </div>
+
+    <!-- Navegação -->
+    <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+      <button onclick="switchTab('home')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200" data-tab="home">
+        <i data-lucide="book-marked" class="w-5 h-5 shrink-0"></i>
+        <span>Início</span>
+      </button>
+      <button onclick="switchTab('catalog')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200" data-tab="catalog">
+        <i data-lucide="library" class="w-5 h-5 shrink-0"></i>
+        <span>Acervo Literário</span>
+      </button>
+      <button onclick="switchTab('gallery')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200" data-tab="gallery">
+        <i data-lucide="image" class="w-5 h-5 shrink-0"></i>
+        <span>Galeria Fotográfica</span>
+      </button>
+      <button onclick="switchTab('audiovisual')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200" data-tab="audiovisual">
+        <i data-lucide="video" class="w-5 h-5 shrink-0"></i>
+        <span>Área Audiovisual</span>
+      </button>
+      <button onclick="switchTab('about')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200" data-tab="about">
+        <i data-lucide="info" class="w-5 h-5 shrink-0"></i>
+        <span>Sobre o Museu</span>
+      </button>
+      <button onclick="switchTab('admin')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200" data-tab="admin">
+        <i data-lucide="shield" class="w-5 h-5 shrink-0"></i>
+        <span>Painel Administrativo</span>
+      </button>
+    </nav>
+
+    <div class="p-4 border-t border-[#4C6444]/40 bg-[#0c1f18] dark:bg-[#050b09] text-xs text-[#B3B792] text-center shrink-0">
+      <p>© 2026 Museu Literário Digital</p>
+    </div>
+  </aside>
+
+  <!-- Overlay Mobile -->
+  <div id="mobileOverlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/60 z-40 lg:hidden hidden backdrop-blur-sm"></div>
+
+  <!-- ==========================================
+      CONTEÚDO PRINCIPAL
+      ========================================== -->
+  <main class="flex-1 flex flex-col lg:pl-72 h-screen overflow-hidden bg-[#E5D7C4] dark:bg-[#0f1715] w-full">
+    
+    <!-- Barra Superior -->
+    <header class="h-16 bg-[#102820] dark:bg-[#08120e] text-[#E5D7C4] px-6 flex items-center justify-between shadow-md z-30 shrink-0 border-b border-[#4C6444]/20">
+      <div class="flex items-center space-x-4 min-w-0">
+        <button onclick="toggleMobileMenu()" class="lg:hidden p-2 rounded-lg bg-[#4C6444] text-white focus:outline-none shrink-0">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <span id="headerTitle" class="font-serif text-lg font-medium text-white truncate">Página Inicial</span>
+      </div>
+
+      <!-- Botão de Alternância de Tema (Modo Escuro / Claro) -->
+      <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-[#1b3b30] dark:bg-[#152a23] text-[#B3B792] hover:text-white transition shadow-sm flex items-center justify-center" title="Alternar Modo Escuro/Claro">
+        <i id="themeIcon" data-lucide="moon" class="w-5 h-5"></i>
+      </button>
+    </header>
+
+    <!-- Área Rolável Principal -->
+    <div id="contentArea" class="flex-1 overflow-y-auto">
+      <!-- Conteúdo injetado via JS -->
+    </div>
+  </main>
+
+  <!-- ==========================================
+      MODAL DO LEITOR DE LIVROS
+      ========================================== -->
+  <div id="pdfReaderModal" class="fixed inset-0 z-50 flex flex-col bg-[#2c221a] dark:bg-[#121816] text-[#F4ECD8] hidden">
+    <div id="readerHeader" class="h-16 px-6 flex items-center justify-between border-b border-[#433422] dark:border-[#222c27] bg-[#1a130f] dark:bg-[#0a0f0d] shrink-0">
+      <div class="overflow-hidden pr-2 min-w-0">
+        <h3 id="readerBookTitle" class="font-serif font-bold text-base truncate">Título da Obra</h3>
+        <p id="readerBookAuthor" class="text-xs opacity-75 truncate">Autor</p>
+      </div>
+      <div class="flex items-center space-x-3 shrink-0">
+        <span id="pageIndicator" class="hidden sm:inline-block text-xs font-mono bg-black/30 px-3 py-1 rounded-lg">Página 1 de 3</span>
+        <button onclick="closePdfReader()" id="closeReaderBtn" class="bg-red-600 text-white p-2.5 rounded-xl hover:bg-red-700 transition flex items-center justify-center">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div id="readerBodyContainer" class="flex-1 flex items-center justify-center p-4 sm:p-8 page-container overflow-hidden w-full h-full"></div>
+  </div>
+
+  <!-- ==========================================
+      MODAL DE FOTO EM TELA CHEIA
+      ========================================== -->
+  <div id="photoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 hidden backdrop-blur-md" onclick="closePhotoModal()">
+    <div class="relative max-w-5xl max-h-[90vh] w-full flex flex-col items-center" onclick="event.stopPropagation()">
+      <button onclick="closePhotoModal()" class="absolute -top-12 right-0 text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+      <img id="modalPhotoImg" src="" class="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl border border-white/10">
+      <div class="mt-4 text-center text-white">
+        <h3 id="modalPhotoTitle" class="font-serif text-xl font-bold"></h3>
+        <p id="modalPhotoDesc" class="text-sm text-gray-300 mt-1 max-w-xl"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+      SCRIPT DA APLICAÇÃO E FIREBASE
+      ========================================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD_CIISlRS5yyjXM26Z07Po7YlNMAq2tdY",
+      authDomain: "muse-literario-digital.firebaseapp.com",
+      databaseURL: "https://muse-literario-digital-default-rtdb.firebaseio.com",
+      projectId: "muse-literario-digital",
+      storageBucket: "muse-literario-digital.firebasestorage.app",
+      messagingSenderId: "29538710467",
+      appId: "1:29538710467:web:a802fc2ae5c7b710a14376"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.firebaseApp = app;
+  </script>
+
+  <script>
+    const state = {
+      activeTab: 'home',
+      isAdminAuth: false,
+      searchTerm: '',
+      selectedCategoryFilter: 'all',
+      selectedBookId: null,
+      currentPage: 1,
+      totalPages: 1,
+      isDarkMode: false,
+      
+      books: [
+        {
+          id: '1',
+          title: 'Crônicas da Terra Vermelha',
+          subtitle: 'Memórias e paisagens do interior',
+          author: 'Mariana Silva',
+          synopsis: 'Uma coletânea sensível de crônicas sobre a infância no interior, os cheiros da terra molhada, as tardes de outono e a sabedoria dos antigos.',
+          category: 'Crônica',
+          year: '2025',
+          coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
+          pdfUrl: '',
+          status: 'published',
+          featured: true,
+          shelf: 'Crônicas',
+          pages: [
+            "Capítulo I\n\nA terra vermelha guardava os segredos das primeiras chuvas de novembro. Quando o cheiro de mato molhado subia pelo vale, sabíamos que o tempo havia mudado de ritmo.",
+            "As tardes eram longas na varanda da casa de vó. Entre um gole de café coado na hora e histórias contadas à sombra da mangueira, o mundo lá fora parecia distante e seguro.",
+            "Hoje, mesmo longe daquela paisagem, basta fechar os olhos para ouvir o vento balançar os cafezais. As raízes que lá deixamos continuam a nutrir quem somos."
+          ]
+        },
+        {
+          id: '2',
+          title: 'Versos do Sertão Verde',
+          subtitle: 'Poesia popular e contemporânea',
+          author: 'Antônio Bezerra',
+          synopsis: 'Poemas que cantam a força da caatinga, a resiliência do povo nordestino e a beleza das chuvas que transformam a paisagem.',
+          category: 'Poesia',
+          year: '2026',
+          coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600',
+          pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          status: 'published',
+          featured: true,
+          shelf: 'Literatura nordestina',
+          pages: []
+        }
+      ],
+      categories: ['Conto', 'Crônica', 'Poesia', 'Literatura nordestina', 'Produção escolar', 'Romance'],
+      gallery: [
+        { id: '1', title: 'Oficina de Contação de Histórias', description: 'Alunos reunidos na biblioteca ao ar livre compartilhando leituras.', imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80&w=1200', date: 'Agosto, 2026', project: 'Festival' },
+        { id: '2', title: 'Exposição de Poesia Visual', description: 'Trabalhos artísticos desenvolvidos pelas turmas do ensino médio.', imageUrl: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&q=80&w=1200', date: 'Setembro, 2026', project: 'Mostra Cultural' }
+      ],
+      videos: [
+        { id: '1', title: 'Documentário: Vozes da Terra', description: 'Panorama sobre literatura oral e contadores de causos.', videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', category: 'Documentário' }
+      ]
+    };
+
+    const shelvesConfig = [
+      { title: 'Obras em destaque', shelfName: 'Obras em destaque' },
+      { title: 'Crônicas', shelfName: 'Crônicas' },
+      { title: 'Literatura nordestina', shelfName: 'Literatura nordestina' },
+      { title: 'Novas publicações', shelfName: 'Novas publicações' }
+    ];
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function switchTab(tab) {
+      state.activeTab = tab;
+      render();
+      closeMobileMenu();
+    }
+
+    function toggleMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('mobileOverlay');
+      if(sidebar) sidebar.classList.toggle('-translate-x-full');
+      if(overlay) overlay.classList.toggle('hidden');
+    }
+
+    function closeMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('mobileOverlay');
+      if(sidebar) sidebar.classList.add('-translate-x-full');
+      if(overlay) overlay.classList.add('hidden');
+    }
+
+    function toggleDarkMode() {
+      state.isDarkMode = !state.isDarkMode;
+      const htmlElem = document.documentElement;
+      const themeIcon = document.getElementById('themeIcon');
+      
+      if (state.isDarkMode) {
+        htmlElem.classList.add('dark');
+        if(themeIcon) themeIcon.setAttribute('data-lucide', 'sun');
+      } else {
+        htmlElem.classList.remove('dark');
+        if(themeIcon) themeIcon.setAttribute('data-lucide', 'moon');
+      }
+      if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeMobileMenu();
+        closePdfReader();
+        closePhotoModal();
+      }
+    });
+
+    function render() {
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const tab = btn.getAttribute('data-tab');
+        if (tab === state.activeTab || (state.activeTab === 'book-detail' && tab === 'catalog')) {
+          btn.className = 'nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium bg-[#4C6444] text-white shadow-md';
+        } else {
+          btn.className = 'nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium text-[#B3B792] hover:bg-[#15352a] hover:text-white dark:hover:bg-[#152721] transition-all';
+        }
+      });
+
+      const titles = {
+        home: 'Página Inicial',
+        catalog: 'Acervo Literário',
+        'book-detail': 'Detalhes da Obra',
+        gallery: 'Galeria Fotográfica',
+        audiovisual: 'Área Audiovisual',
+        about: 'Sobre o Projeto',
+        admin: 'Painel Administrativo'
+      };
+      
+      const headerTitle = document.getElementById('headerTitle');
+      if(headerTitle) headerTitle.textContent = titles[state.activeTab] || 'Museu Literário';
+
+      const area = document.getElementById('contentArea');
+      if(!area) return;
+      area.innerHTML = '';
+
+      if (state.activeTab === 'home') area.innerHTML = renderHome();
+      else if (state.activeTab === 'catalog') area.innerHTML = renderCatalog();
+      else if (state.activeTab === 'book-detail') area.innerHTML = renderBookDetail();
+      else if (state.activeTab === 'gallery') area.innerHTML = renderGallery();
+      else if (state.activeTab === 'audiovisual') area.innerHTML = renderAudiovisual();
+      else if (state.activeTab === 'about') area.innerHTML = renderAbout();
+      else if (state.activeTab === 'admin') area.innerHTML = renderAdmin();
+
+      if(typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }
+
+    function renderHome() {
+      let shelvesHtml = shelvesConfig.map(shelf => {
+        const shelfBooks = state.books.filter(b => b.status === 'published' && (b.shelf === shelf.shelfName || (shelf.shelfName === 'Obras em destaque' && b.featured)));
+        if (shelfBooks.length === 0) return '';
+
+        let booksCards = shelfBooks.map(book => `
+          <div class="w-60 sm:w-68 lg:w-72 shrink-0 bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl shadow-xl overflow-hidden border border-[#CFBB99]/80 dark:border-[#263830] flex flex-col group hover:shadow-2xl transition duration-300">
+            <div class="relative h-72 sm:h-80 overflow-hidden bg-[#d3c1a5] dark:bg-[#101915]">
+              <img src="${escapeHtml(book.coverUrl)}" alt="${escapeHtml(book.title)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+              <div class="absolute top-3 left-3 bg-[#102820]/90 text-[#E5D7C4] text-[10px] sm:text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider">
+                ${escapeHtml(book.category)}
+              </div>
+            </div>
+            <div class="p-5 flex-1 flex flex-col justify-between">
+              <div>
+                <h3 class="font-serif font-bold text-lg sm:text-xl text-[#102820] dark:text-[#F4ECD8] line-clamp-1">${escapeHtml(book.title)}</h3>
+                <p class="text-xs sm:text-sm text-[#8A6240] dark:text-[#bca282] font-medium mt-1 line-clamp-1">${escapeHtml(book.author)}</p>
+              </div>
+              <div class="mt-5 pt-3.5 border-t border-[#CFBB99]/50 dark:border-[#263830] flex items-center justify-between">
+                <span class="text-xs text-[#889063] font-bold">${escapeHtml(book.year)}</span>
+                <button onclick="openBook('${book.id}')" class="bg-[#4C6444] hover:bg-[#394c33] text-white text-xs sm:text-sm px-4 py-2 rounded-xl font-medium transition shadow">
+                  Ler Obra
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        return `
+          <div class="space-y-4">
+            <div class="flex items-center justify-between border-b border-[#889063]/30 pb-3">
+              <h2 class="text-xl sm:text-2xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4] flex items-center space-x-2.5">
+                <span class="w-3 h-3 rounded-full bg-[#4C6444]"></span>
+                <span>${escapeHtml(shelf.title)}</span>
+              </h2>
+            </div>
+            <div class="flex space-x-6 overflow-x-auto pb-4 pt-2 scrollbar-thin">
+              ${booksCards}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="min-h-full flex flex-col pb-28 lg:pb-12">
+          <div class="bg-[#102820] dark:bg-[#070e0b] text-white py-16 lg:py-24 px-6 sm:px-12 flex flex-col items-center justify-center text-center shadow-2xl">
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-[#E5D7C4] leading-tight max-w-3xl">
+              “Um lugar para as histórias viverem.”
+            </h1>
+            <p class="text-sm sm:text-lg text-[#B3B792] font-light max-w-xl mx-auto mt-4">
+              Explore livros, poemas e memórias que atravessam gerações com elegância e imersão.
+            </p>
+            <button onclick="switchTab('catalog')" class="mt-8 bg-[#4C6444] hover:bg-[#5d7954] text-white px-8 py-3.5 rounded-2xl font-medium shadow-xl transition text-sm sm:text-base">
+              Explorar Acervo Completo
+            </button>
+          </div>
+          <div class="py-10 lg:py-16 px-4 sm:px-8 lg:px-16 space-y-12 max-w-[1400px] mx-auto w-full">
+            ${shelvesHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCatalog() {
+      let categoriesBtns = `<button onclick="setCategoryFilter('all')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm shrink-0 ${state.selectedCategoryFilter === 'all' ? 'bg-[#102820] dark:bg-[#20362e] text-white' : 'bg-[#F4EFE6] dark:bg-[#16221d] text-[#4D2D18] dark:text-[#d1bfa7]'}">Todas</button>`;
+      categoriesBtns += state.categories.map(c => `
+        <button onclick="setCategoryFilter('${c}')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm shrink-0 ${state.selectedCategoryFilter === c ? 'bg-[#102820] dark:bg-[#20362e] text-white' : 'bg-[#F4EFE6] dark:bg-[#16221d] text-[#4D2D18] dark:text-[#d1bfa7]'}">${escapeHtml(c)}</button>
+      `).join('');
+
+      return `
+        <div class="p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto space-y-8 pb-32 lg:pb-12">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 class="text-2xl sm:text-4xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4]">Acervo Literário</h1>
+              <p class="text-sm text-[#4D2D18] dark:text-[#bca282] mt-1">Pesquise por título, autor, sinopse ou categoria.</p>
+            </div>
+            <div class="relative w-full md:w-96">
+              <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-[#8A6240] dark:text-[#bca282]"></i>
+              <input type="text" placeholder="Pesquisar no acervo..." value="${escapeHtml(state.searchTerm)}" oninput="state.searchTerm = this.value; renderCatalogGrid()" class="w-full bg-[#F4EFE6] dark:bg-[#16221d] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-2xl pl-11 pr-4 py-3 text-sm focus:outline-none shadow-sm">
+            </div>
+          </div>
+          <div class="flex items-center space-x-2 overflow-x-auto pb-2">${categoriesBtns}</div>
+          <div id="booksGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8">
+            ${getFilteredBooksHTML()}
+          </div>
+        </div>
+      `;
+    }
+
+    function getFilteredBooksHTML() {
+      const termo = state.searchTerm.trim().toLowerCase();
+
+      let filtered = state.books.filter(b => b.status === 'published')
+        .filter(b => state.selectedCategoryFilter === 'all' || b.category === state.selectedCategoryFilter)
+        .filter(book =>
+          book.title.toLowerCase().includes(termo) ||
+          book.author.toLowerCase().includes(termo) ||
+          (book.subtitle || '').toLowerCase().includes(termo) ||
+          (book.synopsis || '').toLowerCase().includes(termo) ||
+          book.category.toLowerCase().includes(termo)
+        );
+
+      if (filtered.length === 0) return `<div class="col-span-full py-16 text-center text-sm text-[#8A6240] dark:text-[#bca282]">Nenhuma obra encontrada com os critérios informados.</div>`;
+
+      return filtered.map(book => `
+        <div class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl shadow-lg overflow-hidden border border-[#CFBB99] dark:border-[#263830] flex flex-col group hover:shadow-2xl transition duration-300">
+          <div class="relative h-72 sm:h-80 bg-[#d3c1a5] dark:bg-[#101915] overflow-hidden">
+            <img src="${escapeHtml(book.coverUrl)}" class="w-full h-full object-cover">
+            <div class="absolute top-3 left-3 bg-[#102820]/90 text-[#E5D7C4] text-[10px] px-3 py-1 rounded-full font-semibold uppercase">
+              ${escapeHtml(book.category)}
+            </div>
+          </div>
+          <div class="p-5 flex-1 flex flex-col justify-between">
+            <div>
+              <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#F4ECD8] line-clamp-1">${escapeHtml(book.title)}</h3>
+              <p class="text-xs sm:text-sm text-[#8A6240] dark:text-[#bca282] font-medium mt-1">${escapeHtml(book.author)}</p>
+            </div>
+            <div class="mt-5 pt-3 border-t border-[#CFBB99] dark:border-[#263830] flex items-center justify-between">
+              <span class="text-xs text-[#889063] font-bold">${escapeHtml(book.year)}</span>
+              <button onclick="openBook('${escapeHtml(book.id)}')" class="bg-[#4C6444] text-white text-xs px-4 py-2 rounded-xl font-medium shadow hover:bg-[#394c33] transition">Ver Detalhes</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderCatalogGrid() {
+      const grid = document.getElementById('booksGrid');
+      if (grid) grid.innerHTML = getFilteredBooksHTML();
+    }
+
+    function renderBookDetail() {
+      const book = state.books.find(b => b.id === state.selectedBookId);
+      if (!book) return `<div class="p-16 text-center">Obra não encontrada. <button onclick="switchTab('catalog')" class="text-[#4C6444] underline">Voltar</button></div>`;
+
+      return `
+        <div class="p-6 sm:p-10 lg:p-16 max-w-5xl mx-auto space-y-8 pb-36 lg:pb-16">
+          <button onclick="switchTab('catalog')" class="flex items-center space-x-2 text-[#4C6444] dark:text-[#889063] font-medium text-sm hover:underline">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i><span>Voltar ao Acervo</span>
+          </button>
+          <div class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#CFBB99] dark:border-[#263830] grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 items-start">
+            <div class="md:col-span-1 flex flex-col items-center">
+              <div class="rounded-2xl overflow-hidden shadow-2xl aspect-[3/4] border border-[#CFBB99] dark:border-[#263830] w-52 sm:w-64 md:w-full">
+                <img src="${escapeHtml(book.coverUrl)}" class="w-full h-full object-cover">
+              </div>
+              <button onclick="openPdfReader('${escapeHtml(book.id)}')" class="w-full mt-6 flex items-center justify-center space-x-2 bg-[#4C6444] hover:bg-[#394c33] text-white py-3.5 px-6 rounded-2xl font-medium shadow-xl transition">
+                <i data-lucide="book-open" class="w-5 h-5"></i><span>Ler Obra Agora</span>
+              </button>
+            </div>
+            <div class="md:col-span-2 space-y-5">
+              <span class="inline-block bg-[#102820] text-[#E5D7C4] text-xs px-3.5 py-1 rounded-full uppercase tracking-wider">${escapeHtml(book.category)}</span>
+              <h1 class="text-2xl sm:text-4xl font-serif font-bold text-[#102820] dark:text-[#F4ECD8] leading-tight">${escapeHtml(book.title)}</h1>
+              <p class="text-sm sm:text-lg text-[#8A6240] dark:text-[#bca282] font-serif italic">${escapeHtml(book.subtitle || '')}</p>
+              <p class="text-sm font-semibold text-[#4C6444] dark:text-[#889063]">Autor: ${escapeHtml(book.author)}</p>
+              <div class="border-t border-[#CFBB99] dark:border-[#263830] pt-5">
+                <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#F4ECD8] mb-2">Sinopse</h3>
+                <div class="max-h-[35vh] sm:max-h-none overflow-y-auto pr-2">
+                  <p class="text-sm sm:text-base text-[#4D2D18] dark:text-[#d1bfa7] leading-relaxed">${escapeHtml(book.synopsis)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGallery() {
+      let cards = state.gallery.map(item => `
+        <div onclick="openPhotoModal('${encodeURIComponent(item.imageUrl)}', '${encodeURIComponent(item.title)}', '${encodeURIComponent(item.description)}')" class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl overflow-hidden shadow-xl border border-[#CFBB99] dark:border-[#263830] flex flex-col group cursor-pointer hover:shadow-2xl transition duration-300">
+          <div class="h-64 sm:h-72 bg-[#d3c1a5] dark:bg-[#101915] relative overflow-hidden">
+            <img src="${escapeHtml(item.imageUrl)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <span class="bg-[#102820]/90 text-white text-xs px-4 py-2 rounded-xl font-medium shadow">Ver em Tela Cheia</span>
+            </div>
+          </div>
+          <div class="p-6">
+            <div class="text-xs text-[#889063] font-bold mb-1">${escapeHtml(item.date)} • ${escapeHtml(item.project)}</div>
+            <h3 class="font-serif font-bold text-xl text-[#102820] dark:text-[#F4ECD8]">${escapeHtml(item.title)}</h3>
+            <p class="text-xs sm:text-sm text-[#4D2D18] dark:text-[#d1bfa7] mt-2 line-clamp-2">${escapeHtml(item.description)}</p>
+          </div>
+        </div>
+      `).join('');
+
+      return `<div class="p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto space-y-8 pb-32 lg:pb-12"><h1 class="text-2xl sm:text-4xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4]">Galeria Fotográfica</h1><p class="text-sm text-[#4D2D18] dark:text-[#bca282]">Clique em qualquer imagem para ampliá-la.</p><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">${cards}</div></div>`;
+    }
+
+    function renderAudiovisual() {
+      let cards = state.videos.map(vid => `
+        <div class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl overflow-hidden shadow-xl border border-[#CFBB99] dark:border-[#263830] flex flex-col">
+          <div class="aspect-video bg-black relative">
+            <iframe src="${escapeHtml(vid.videoUrl)}" class="w-full h-full" allowfullscreen></iframe>
+          </div>
+          <div class="p-6 space-y-2">
+            <span class="text-xs bg-[#102820] text-[#E5D7C4] px-3 py-0.5 rounded-full font-semibold uppercase">${escapeHtml(vid.category)}</span>
+            <h3 class="font-serif font-bold text-xl text-[#102820] dark:text-[#F4ECD8] mt-2">${escapeHtml(vid.title)}</h3>
+            <p class="text-sm text-[#4D2D18] dark:text-[#d1bfa7]">${escapeHtml(vid.description)}</p>
+          </div>
+        </div>
+      `).join('');
+
+      return `<div class="p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto space-y-8 pb-32 lg:pb-12"><h1 class="text-2xl sm:text-4xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4]">Área Audiovisual</h1><div class="grid grid-cols-1 lg:grid-cols-2 gap-8">${cards}</div></div>`;
+    }
+
+    function renderAbout() {
+      return `
+        <div class="p-6 sm:p-10 lg:p-16 max-w-4xl mx-auto pb-32 lg:pb-12">
+          <div class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl p-8 sm:p-12 shadow-2xl border border-[#CFBB99] dark:border-[#263830] space-y-6">
+            <h1 class="text-2xl sm:text-4xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4]">Sobre o Museu Literário Digital</h1>
+            <p class="text-sm sm:text-base text-[#4D2D18] dark:text-[#d1bfa7] leading-relaxed">
+              Plataforma dedicada à preservação, organização, divulgação e leitura de obras literárias e produções culturais escolares.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAdmin() {
+      if (!state.isAdminAuth) {
+        return `
+          <div class="max-w-md mx-auto bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl p-8 sm:p-10 shadow-2xl border border-[#CFBB99] dark:border-[#263830] space-y-6 mt-12 mx-4 sm:mx-auto pb-32 lg:pb-12">
+            <div class="text-center space-y-2">
+              <i data-lucide="shield" class="w-12 h-12 text-[#4C6444] mx-auto"></i>
+              <h2 class="text-2xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4]">Área Restrita</h2>
+              <p class="text-xs text-[#4D2D18] dark:text-[#bca282]">Insira a chave de acesso administrativo</p>
+            </div>
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+              <input id="adminPassInput" type="password" placeholder="Senha..." class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-2xl px-4 py-3 text-sm focus:outline-none" required>
+              <button type="submit" class="w-full bg-[#102820] dark:bg-[#20362e] text-white py-3 rounded-2xl font-medium text-sm shadow-lg">Entrar</button>
+            </form>
+          </div>
+        `;
+      }
+
+      let booksList = state.books.map(b => `
+        <div class="bg-white dark:bg-[#101915] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830] flex items-center justify-between shadow-sm">
+          <div class="pr-2 min-w-0">
+            <h4 class="font-serif font-bold text-sm text-[#102820] dark:text-[#F4ECD8] truncate">${escapeHtml(b.title)}</h4>
+            <p class="text-xs text-[#8A6240] dark:text-[#bca282] truncate">${escapeHtml(b.author)} • ${escapeHtml(b.category)}</p>
+          </div>
+          <button onclick="deleteBook('${escapeHtml(b.id)}')" class="p-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-xl shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto space-y-8 pb-32 lg:pb-12">
+          <div class="flex items-center justify-between bg-[#F4EFE6] dark:bg-[#16221d] p-4 rounded-2xl border border-[#CFBB99] dark:border-[#263830]">
+            <span class="text-sm font-bold text-[#102820] dark:text-[#E5D7C4]">Painel Administrativo</span>
+            <button onclick="state.isAdminAuth=false; render();" class="text-xs text-red-700 dark:text-red-300 font-semibold">Sair</button>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+              <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Obra</h3>
+              <form id="bookForm" onsubmit="handleSaveBook(event)" class="space-y-3">
+                <input id="fTitle" placeholder="Título *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+                <input id="fSubtitle" placeholder="Subtítulo" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+                <input id="fAuthor" placeholder="Autor *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+                <input id="fCategory" placeholder="Categoria (ex: Conto, Poesia) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+                <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+                <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+                <input id="fCover" placeholder="URL da Capa" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+                <input id="fPdf" placeholder="URL do PDF Original (opcional)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+                <textarea id="fPages" placeholder="Páginas em texto (separadas por linhas em branco)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+                <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow">Salvar Obra</button>
+              </form>
+            </div>
+            <div class="lg:col-span-2 bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
+              <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Obras Cadastradas</h3>
+              <div class="space-y-3 max-h-[500px] overflow-y-auto">${booksList}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openBook(id) {
+      state.selectedBookId = id;
+      switchTab('book-detail');
+    }
+
+    function setCategoryFilter(cat) {
+      state.selectedCategoryFilter = cat;
+      render();
+    }
+
+    function handleAdminLogin(e) {
+      e.preventDefault();
+      const inputPass = document.getElementById('adminPassInput').value;
+      if (inputPass === 'admin123') {
+        state.isAdminAuth = true;
+        render();
+      } else {
+        alert('Senha incorreta!');
+      }
+    }
+
+    function handleSaveBook(e) {
+      e.preventDefault();
+      const rawPages = document.getElementById('fPages').value.trim();
+      const pagesArray = rawPages ? rawPages.split(/\n\s*\n/) : ["Página inicial da obra.", "Conteúdo e desenvolvimento.", "Conclusão."];
+
+      const newBook = {
+        id: Date.now().toString(),
+        title: document.getElementById('fTitle').value,
+        subtitle: document.getElementById('fSubtitle').value,
+        author: document.getElementById('fAuthor').value,
+        category: document.getElementById('fCategory').value,
+        year: document.getElementById('fYear').value || '2026',
+        synopsis: document.getElementById('fSynopsis').value,
+        coverUrl: document.getElementById('fCover').value || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
+        pdfUrl: document.getElementById('fPdf').value.trim(),
+        status: 'published',
+        featured: true,
+        shelf: 'Novas publicações',
+        pages: pagesArray
+      };
+
+      state.books.unshift(newBook);
+      alert('Obra cadastrada com sucesso!');
+      document.getElementById('bookForm').reset();
+      render();
+    }
+
+    function deleteBook(id) {
+      if (confirm('Deseja excluir esta obra do acervo?')) {
+        state.books = state.books.filter(b => b.id !== id);
+        render();
+      }
+    }
+
+    function openPdfReader(bookId) {
+      const book = state.books.find(b => b.id === bookId);
+      if (!book) return;
+      
+      state.currentReadingBook = book;
+      document.getElementById('readerBookTitle').textContent = book.title;
+      document.getElementById('readerBookAuthor').textContent = book.author;
+
+      const bodyContainer = document.getElementById('readerBodyContainer');
+      bodyContainer.innerHTML = '';
+
+      if (book.pdfUrl && book.pdfUrl.length > 5) {
+        document.getElementById('pageIndicator').style.display = 'none';
+        bodyContainer.innerHTML = `
+          <div class="w-full h-full flex flex-col items-center justify-center bg-black/20 p-2 sm:p-4 rounded-2xl">
+            <iframe src="${escapeHtml(book.pdfUrl)}" class="w-full h-full rounded-xl shadow-2xl bg-white" title="Leitor de PDF"></iframe>
+          </div>
+        `;
+      } else if (book.pages && book.pages.length > 0) {
+        document.getElementById('pageIndicator').style.display = 'inline-block';
+        state.currentPage = 1;
+        state.totalPages = book.pages.length;
+
+        bodyContainer.innerHTML = `
+          <div id="bookPageContainer" class="page-flip w-full h-full max-w-4xl bg-[#F9F3EA] dark:bg-[#141c19] text-[#2c221a] dark:text-[#E5D7C4] p-6 sm:p-16 rounded-2xl shadow-2xl border-l-8 border-[#102820] dark:border-[#263830] flex flex-col justify-between overflow-y-auto">
+            <div class="border-b border-[#dcd0bc] dark:border-[#263830] pb-4 mb-6 flex justify-between items-center shrink-0">
+                      <span class="font-serif italic text-sm text-[#8A6240] dark:text-[#bca282] truncate pr-2">${escapeHtml(book.title)}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 font-mono shrink-0" id="topPageNum">1</span>
+            </div>
+
+            <div id="pageContentText" class="flex-1 font-serif text-lg sm:text-2xl leading-relaxed space-y-4 my-auto"></div>
+
+            <div class="pt-6 border-t border-[#dcd0bc] dark:border-[#263830] flex justify-between items-center mt-6 shrink-0">
+              <button onclick="changePage(-1)" class="px-5 py-2.5 bg-[#4C6444] text-white rounded-xl text-sm font-medium hover:bg-[#394c33] transition flex items-center space-x-2 shadow">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i><span>Anterior</span>
+              </button>
+              <span id="bottomPageNum" class="text-xs text-gray-600 dark:text-gray-400 font-bold">1 / ${state.totalPages}</span>
+              <button onclick="changePage(1)" class="px-5 py-2.5 bg-[#4C6444] text-white rounded-xl text-sm font-medium hover:bg-[#394c33] transition flex items-center space-x-2 shadow">
+                <span>Próxima</span><i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        updateReaderPageContent();
+      } else {
+        bodyContainer.innerHTML = `<div class="text-center text-white p-8">O conteúdo desta obra ainda não está disponível para leitura.</div>`;
+      }
+
+      document.getElementById('pdfReaderModal').classList.remove('hidden');
+      document.getElementById('closeReaderBtn').focus();
+    }
+
+    function closePdfReader() {
+      document.getElementById('pdfReaderModal').classList.add('hidden');
+      document.getElementById('readerBodyContainer').innerHTML = '';
+    }
+
+    function changePage(direction) {
+      const newPage = state.currentPage + direction;
+      if (newPage < 1 || newPage > state.totalPages) return;
+
+      const container = document.getElementById('bookPageContainer');
+      if (!container) return;
+
+      container.classList.add('flipping');
+
+      setTimeout(() => {
+        state.currentPage = newPage;
+        updateReaderPageContent();
+        container.classList.remove('flipping');
+      }, 300);
+    }
+
+    function updateReaderPageContent() {
+      const book = state.currentReadingBook;
+      const text = book.pages && book.pages[state.currentPage - 1] ? book.pages[state.currentPage - 1] : `Página ${state.currentPage}`;
+      
+      const contentElem = document.getElementById('pageContentText');
+      if (contentElem) {
+        contentElem.innerHTML = `<p>${escapeHtml(text).replace(/\n\n/g, '</p><p>')}</p>`;
+      }
+      const topNum = document.getElementById('topPageNum');
+      if (topNum) topNum.textContent = state.currentPage;
+
+      const botNum = document.getElementById('bottomPageNum');
+      if (botNum) botNum.textContent = `${state.currentPage} / ${state.totalPages}`;
+
+      const indicator = document.getElementById('pageIndicator');
+      if (indicator) indicator.textContent = `Página ${state.currentPage} de ${state.totalPages}`;
+      
+      if(typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }
+
+    function openPhotoModal(url, title, desc) {
+      document.getElementById('modalPhotoImg').src = decodeURIComponent(url);
+      document.getElementById('modalPhotoTitle').textContent = decodeURIComponent(title);
+      document.getElementById('modalPhotoDesc').textContent = decodeURIComponent(desc);
+      document.getElementById('photoModal').classList.remove('hidden');
+    }
+
+    function closePhotoModal() {
+      document.getElementById('photoModal').classList.add('hidden');
+      document.getElementById('modalPhotoImg').src = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+    });
+  </script>
+</body>
+</html>
