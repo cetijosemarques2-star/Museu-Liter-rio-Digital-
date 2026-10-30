@@ -41,7 +41,6 @@
     .flipping {
       transform: rotateY(-90deg);
     }
-    /* Estilização suave para scrollbars horizontais */
     .custom-scrollbar::-webkit-scrollbar {
       height: 6px;
     }
@@ -419,8 +418,8 @@
         `).join('');
 
         return `
-              return `
           <div class="space-y-4 w-full overflow-hidden">
+               <div class="space-y-4 w-full overflow-hidden">
             <div class="flex items-center justify-between border-b border-[#889063]/30 pb-3">
               <h2 class="text-lg sm:text-2xl font-serif font-bold text-[#102820] dark:text-[#E5D7C4] flex items-center space-x-2.5 truncate pr-2">
                 <span class="w-3 h-3 rounded-full bg-[#4C6444] shrink-0"></span>
@@ -706,7 +705,7 @@
 
       const newBook = {
         id: Date.now().toString(),
-        title: documentelement.getElementById('fTitle').value,
+        title: document.getElementById('fTitle').value,
         subtitle: document.getElementById('fSubtitle').value,
         author: document.getElementById('fAuthor').value,
         category: document.getElementById('fCategory').value,
