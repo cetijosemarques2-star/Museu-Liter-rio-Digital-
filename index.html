@@ -20,6 +20,12 @@
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- PDF.js para ler e converter PDFs automaticamente -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
 
   <style>
     body {
@@ -155,6 +161,21 @@
     </div>
     
     <div id="readerBodyContainer" class="flex-1 flex items-center justify-center p-4 sm:p-8 page-container overflow-hidden w-full h-full"></div>
+  </div>
+
+  <!-- ==========================================
+      MODAL DE SELEÇÃO DE CAPA DA GALERIA
+      ========================================== -->
+  <div id="galleryPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 hidden backdrop-blur-md">
+    <div class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#CFBB99] dark:border-[#263830]">
+      <div class="flex items-center justify-between pb-4 border-b border-[#CFBB99] dark:border-[#263830]">
+        <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Selecione uma imagem da Galeria para Capa</h3>
+        <button onclick="closeGalleryPicker()" class="p-2 text-gray-500 hover:text-red-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="galleryPickerGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-4 py-4 overflow-y-auto flex-1">
+        <!-- Preenchido dinamicamente -->
+      </div>
+    </div>
   </div>
 
   <!-- ==========================================
@@ -349,6 +370,7 @@
         closeMobileMenu();
         closePdfReader();
         closePhotoModal();
+        closeGalleryPicker();
       }
     });
 
@@ -694,17 +716,31 @@
               <datalist id="categoryList">${categoriesOptions}</datalist>
 
               <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-              <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border bborder-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
-              <input id="fCover" placeholder="URL da Capa da Obra" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-              <input id="fPdf" placeholder="URL do PDF (Leitor embutido)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-              <input id="fExternalLink" placeholder="Link externo (Música, Documento, Drive)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+              <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+              
+              <!-- Seletor de Capa com botão Galeria -->
+              <div class="space-y-1">
+                <div class="flex gap-2">
+                  <input id="fCover" placeholder="URL da Capa da Obra" class="flex-1 bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+                  <button type="button" onclick="openGalleryPicker()" class="bg-[#889063] hover:bg-[#6f764e] text-white px-3 py-2 rounded-xl text-xs font-semibold shrink-0">Galeria</button>
+                </div>
+              </div>
+
+              <!-- Seletor de PDF para converter em Obra -->
+              <div class="space-y-1 bg-white dark:bg-[#101915] p-3 rounded-xl border border-[#CFBB99] dark:border-[#263830]">
+                <label class="text-[11px] font-bold text-[#4C6444] dark:text-[#889063] block">Importar Arquivo PDF (Converter em Obra)</label>
+                <input type="file" id="fPdfFile" accept="application/pdf" onchange="handlePdfFileSelect(event)" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#4C6444] file:text-white hover:file:bg-[#394c33] cursor-pointer">
+                <p id="pdfStatusMsg" class="text-[10px] text-gray-400 mt-1">O PDF será lido e transformado em páginas para leitura no leitor do museu.</p>
+              </div>
+
+              <input id="fExternalLink" placeholder="Link externo opcional (Drive, YouTube, etc)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
               
               <div class="flex items-center space-x-2 pt-1">
                 <input type="checkbox" id="fFeatured" class="rounded text-[#4C6444] focus:ring-[#4C6444]">
                 <label for="fFeatured" class="text-xs text-[#4D2D18] dark:text-[#d1bfa7]">Destacar na Página Inicial</label>
               </div>
 
-              <textarea id="fPages" placeholder="Páginas em texto (separadas por linhas em branco)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
+              <textarea id="fPages" placeholder="Páginas em texto (geradas automaticamente pelo PDF ou digite aqui)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
               <button type="submit" class="w-full bg-[#4C6444] text-white py-3 rounded-xl text-xs font-semibold shadow hover:bg-[#394c33]">Salvar Obra no Sistema & Firebase</button>
             </form>
           </div>
@@ -714,6 +750,73 @@
           </div>
         </div>
       `;
+    }
+
+    function openGalleryPicker() {
+      const grid = document.getElementById('galleryPickerGrid');
+      if (!grid) return;
+      grid.innerHTML = state.gallery.map(item => `
+        <div onclick="selectCoverFromGallery('${escapeHtml(item.imageUrl)}')" class="cursor-pointer rounded-2xl overflow-hidden border-2 border-transparent hover:border-[#4C6444] transition aspect-video bg-black/10 relative group">
+          <img src="${escapeHtml(item.imageUrl)}" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold p-2 text-center">
+            ${escapeHtml(item.title)}
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('galleryPickerModal').classList.remove('hidden');
+    }
+
+    function closeGalleryPicker() {
+      document.getElementById('galleryPickerModal').classList.add('hidden');
+    }
+
+    function selectCoverFromGallery(url) {
+      const coverInput = document.getElementById('fCover');
+      if (coverInput) coverInput.value = url;
+      closeGalleryPicker();
+    }
+
+    async function handlePdfFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const statusMsg = document.getElementById('pdfStatusMsg');
+      statusMsg.textContent = "Lendo e convertendo PDF em obra literária...";
+      statusMsg.className = "text-[10px] text-amber-600 font-semibold mt-1";
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdfDoc = await loadingTask.promise;
+
+        let extractedPages = [];
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+          const page = await pdfDoc.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => item.str).join(' ');
+          if (pageText.trim()) {
+            extractedPages.push(pageText);
+          }
+        }
+
+        if (extractedPages.length === 0) {
+          extractedPages = ["Documento PDF convertido sem texto extraível direto."];
+        }
+
+        document.getElementById('fPages').value = extractedPages.join('\n\n');
+        
+        const titleInput = document.getElementById('fTitle');
+        if (!titleInput.value) {
+          titleInput.value = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+        }
+
+        statusMsg.textContent = `PDF convertido com sucesso! (${pdfDoc.numPages} páginas estruturadas).`;
+        statusMsg.className = "text-[10px] text-emerald-600 font-semibold mt-1";
+      } catch (err) {
+        console.error("Erro ao converter PDF:", err);
+        statusMsg.textContent = "Erro ao processar o arquivo PDF. Tente outro arquivo.";
+        statusMsg.className = "text-[10px] text-red-600 font-semibold mt-1";
+      }
     }
 
     function renderAdminGallery() {
@@ -831,8 +934,8 @@
         category: document.getElementById('fCategory').value,
         year: document.getElementById('fYear').value || '2026',
         synopsis: document.getElementById('fSynopsis').value,
-        coverUrl: document.getElementById('fCover').value || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
-        pdfUrl: document.getElementById('fPdf').value.trim(),
+        coverUrl: document.getElementById('fCover').value || (state.gallery[0] ? state.gallery[0].imageUrl : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600'),
+        pdfUrl: '',
         externalLink: document.getElementById('fExternalLink').value.trim(),
         status: 'published',
         featured: document.getElementById('fFeatured').checked,
@@ -842,7 +945,7 @@
 
       state.books.unshift(newBook);
       await saveDataToFirebase();
-      alert('Obra cadastrada e salva com sucesso!');
+      alert('Obra convertida e cadastrada com sucesso no acervo!');
       document.getElementById('bookForm').reset();
       render();
     }
@@ -947,14 +1050,7 @@
       const bodyContainer = document.getElementById('readerBodyContainer');
       bodyContainer.innerHTML = '';
 
-      if (book.pdfUrl && book.pdfUrl.length > 5) {
-        document.getElementById('pageIndicator').style.display = 'none';
-        bodyContainer.innerHTML = `
-          <div class="w-full h-full flex flex-col items-center justify-center bg-black/20 p-2 sm:p-4 rounded-2xl">
-            <iframe src="${escapeHtml(book.pdfUrl)}" class="w-full h-full rounded-xl shadow-2xl bg-white" title="Leitor de PDF"></iframe>
-          </div>
-        `;
-      } else if (book.pages && book.pages.length > 0) {
+      if (book.pages && book.pages.length > 0) {
         document.getElementById('pageIndicator').style.display = 'inline-block';
         state.currentPage = 1;
         state.totalPages = book.pages.length;
