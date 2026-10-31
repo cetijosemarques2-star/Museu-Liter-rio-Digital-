@@ -184,9 +184,9 @@
       ========================================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-    import { getDatabase, ref, set, get, remove, child } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+    import { getDatabase, ref, set, get, remove, push, onValue } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
-    // Your web app's Firebase configuration
+    // Sua configuração oficial do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyD_CIISlRS5yyjXM26Z07Po7YlNMAq2tdY",
       authDomain: "muse-literario-digital.firebaseapp.com",
@@ -197,16 +197,19 @@
       appId: "1:29538710467:web:a802fc2ae5c7b710a14376"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const database = getDatabase(app);
 
-    window.db = db;
-    window.dbRef = ref;
-    window.dbSet = set;
-    window.dbGet = get;
-    window.dbRemove = remove;
-    window.dbChild = child;
+    // Disponibiliza as ferramentas do Firebase globalmente de forma limpa
+    window.dbAPI = {
+      database,
+      ref,
+      set,
+      get,
+      remove,
+      push,
+      onValue
+    };
   </script>
 
   <script>
@@ -265,51 +268,41 @@
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    async function loadDataFromFirebase() {
-      try {
-        if (!window.db) return;
-        const dbRef = window.dbRef;
-        const dbGet = window.dbGet;
-        
-        const booksSnap = await dbGet(dbRef(window.db, 'books'));
-        if (booksSnap.exists()) state.books = Object.values(booksSnap.val());
+    // Carregamento e sincronização em tempo real via Firebase Realtime Database
+    function initFirebaseSync() {
+      if (!window.dbAPI) return;
+      const { database, ref, onValue } = window.dbAPI;
 
-        const catSnap = await dbGet(dbRef(window.db, 'categories'));
-        if (catSnap.exists()) state.categories = catSnap.val();
+      onValue(ref(database, 'books'), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          state.books = Object.entries(data).map(([id, val]) => ({ ...val, id }));
+          render();
+        }
+      });
 
-        const galSnap = await dbGet(dbRef(window.db, 'gallery'));
-        if (galSnap.exists()) state.gallery = Object.values(galSnap.val());
+      onValue(ref(database, 'categories'), (snapshot) => {
+        if (snapshot.exists()) {
+          state.categories = snapshot.val();
+          render();
+        }
+      });
 
-        const vidSnap = await dbGet(dbRef(window.db, 'videos'));
-        if (vidSnap.exists()) state.videos = Object.values(vidSnap.val());
-      } catch (error) {
-        console.error("Erro ao carregar do Firebase:", error);
-      } finally {
-        render();
-      }
-    }
+      onValue(ref(database, 'gallery'), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          state.gallery = Object.entries(data).map(([id, val]) => ({ ...val, id }));
+          render();
+        }
+      });
 
-    async function saveDataToFirebase() {
-      try {
-        if (!window.db) return;
-        const dbRef = window.dbRef;
-        const dbSet = window.dbSet;
-        
-        const booksObj = {};
-        state.books.forEach(b => { booksObj[b.id] = b; });
-        await dbSet(dbRef(window.db, 'books'), booksObj);
-        await dbSet(dbRef(window.db, 'categories'), state.categories);
-
-        const galObj = {};
-        state.gallery.forEach(g => { galObj[g.id] = g; });
-        await dbSet(dbRef(window.db, 'gallery'), galObj);
-
-        const vidObj = {};
-        state.videos.forEach(v => { vidObj[v.id] = v; });
-        await dbSet(dbRef(window.db, 'videos'), vidObj);
-      } catch (error) {
-        console.error("Erro ao salvar no Firebase:", error);
-      }
+      onValue(ref(database, 'videos'), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          state.videos = Object.entries(data).map(([id, val]) => ({ ...val, id }));
+          render();
+        }
+      });
     }
 
     function switchTab(tab) {
@@ -589,7 +582,7 @@
             </div>
           </div>
           <div class="p-6">
-            <div class="text-xs text-[#889063] font-bold mb-1">${escapeHtml(item.date)} •${escapeHtml(item.project)}</div>
+            <div class="text-xs text-[#889063] font-bold mb-1">${escapeHtml(item.date)} • ${escapeHtml(item.project)}</div>
             <h3 class="font-serif font-bold text-xl text-[#102820] dark:text-[#F4ECD8]">${escapeHtml(item.title)}</h3>
             <p class="text-xs sm:text-sm text-[#4D2D18] dark:text-[#d1bfa7] mt-2 line-clamp-2">${escapeHtml(item.description)}</p>
           </div>
@@ -745,8 +738,7 @@
 
       const reader = new FileReader();
       reader.onload = function(e) {
-        const base64String = e.target.result;
-        document.getElementById('fCover').value = base64String;
+        document.getElementById('fCover').value = e.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -903,14 +895,13 @@
       const pagesArray = rawPages ? rawPages.split(/\n\s*\n/) : ["Página inicial da obra.", "Conteúdo e desenvolvimento.", "Conclusão."];
 
       const newBook = {
-        id: Date.now().toString(),
         title: document.getElementById('fTitle').value,
         subtitle: document.getElementById('fSubtitle').value,
         author: document.getElementById('fAuthor').value,
         category: document.getElementById('fCategory').value,
         year: document.getElementById('fYear').value || '2026',
         synopsis: document.getElementById('fSynopsis').value,
-        coverUrl: document.getElementById('fCover').value || (state.gallery[0] ? state.gallery[0].imageUrl : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600'),
+        coverUrl: document.getElementById('fCover').value || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
         pdfUrl: '',
         externalLink: document.getElementById('fExternalLink').value.trim(),
         status: 'published',
@@ -919,8 +910,10 @@
         pages: pagesArray
       };
 
-      state.books.unshift(newBook);
-      await saveDataToFirebase();
+      const { database, ref, push, set } = window.dbAPI;
+      const newRef = push(ref(database, 'books'));
+      await set(newRef, newBook);
+
       alert('Obra convertida e cadastrada com sucesso no acervo!');
       document.getElementById('bookForm').reset();
       render();
@@ -928,8 +921,8 @@
 
     async function deleteBook(id) {
       if (confirm('Deseja excluir esta obra do acervo?')) {
-        state.books = state.books.filter(b => b.id !== id);
-        await saveDataToFirebase();
+        const { database, ref, remove } = window.dbAPI;
+        await remove(ref(database, 'books/' + id));
         render();
       }
     }
@@ -937,15 +930,16 @@
     async function handleSaveGallery(e) {
       e.preventDefault();
       const newItem = {
-        id: Date.now().toString(),
         title: document.getElementById('gTitle').value,
         imageUrl: document.getElementById('gImageUrl').value,
         date: document.getElementById('gDate').value,
         project: document.getElementById('gProject').value,
         description: document.getElementById('gDesc').value
       };
-      state.gallery.unshift(newItem);
-      await saveDataToFirebase();
+      const { database, ref, push, set } = window.dbAPI;
+      const newRef = push(ref(database, 'gallery'));
+      await set(newRef, newItem);
+
       alert('Fotografia cadastrada com sucesso!');
       document.getElementById('galleryForm').reset();
       render();
@@ -953,8 +947,8 @@
 
     async function deleteGalleryItem(id) {
       if (confirm('Deseja excluir esta foto?')) {
-        state.gallery = state.gallery.filter(g => g.id !== id);
-        await saveDataToFirebase();
+        const { database, ref, remove } = window.dbAPI;
+        await remove(ref(database, 'gallery/' + id));
         render();
       }
     }
@@ -962,14 +956,15 @@
     async function handleSaveVideo(e) {
       e.preventDefault();
       const newItem = {
-        id: Date.now().toString(),
         title: document.getElementById('vTitle').value,
         videoUrl: document.getElementById('vUrl').value,
         category: document.getElementById('vCategory').value,
         description: document.getElementById('vDesc').value
       };
-      state.videos.unshift(newItem);
-      await saveDataToFirebase();
+      const { database, ref, push, set } = window.dbAPI;
+      const newRef = push(ref(database, 'videos'));
+      await set(newRef, newItem);
+
       alert('Vídeo cadastrado com sucesso!');
       document.getElementById('videoForm').reset();
       render();
@@ -977,8 +972,8 @@
 
     async function deleteVideoItem(id) {
       if (confirm('Deseja excluir este vídeo?')) {
-        state.videos = state.videos.filter(v => v.id !== id);
-        await saveDataToFirebase();
+        const { database, ref, remove } = window.dbAPI;
+        await remove(ref(database, 'videos/' + id));
         render();
       }
     }
@@ -988,7 +983,9 @@
       const catName = document.getElementById('cName').value.trim();
       if (catName && !state.categories.includes(catName)) {
         state.categories.push(catName);
-        await saveDataToFirebase();
+        const { database, ref, set } = window.dbAPI;
+        await set(ref(database, 'categories'), state.categories);
+
         alert('Categoria adicionada com sucesso!');
         document.getElementById('categoryForm').reset();
         render();
@@ -1000,7 +997,8 @@
     async function deleteCategory(catName) {
       if (confirm(`Deseja excluir a categoria "${catName}"?`)) {
         state.categories = state.categories.filter(c => c !== catName);
-        await saveDataToFirebase();
+        const { database, ref, set } = window.dbAPI;
+        await set(ref(database, 'categories'), state.categories);
         render();
       }
     }
@@ -1040,7 +1038,7 @@
 
             <div id="pageContentText" class="flex-1 font-serif text-lg sm:text-2xl leading-relaxed space-y-4 my-auto"></div>
 
-            <div class="pt-6 border-t border-[#dcd0bc] dark:border-[#263830] flex justify-between items-center mt-6 shrink-0">
+            <div class="pt-6 border-t border-[#dcd0bc] dark:borderdark:border-[#263830] flex justify-between items-center mt-6 shrink-0">
               <button onclick="changePage(-1)" class="px-5 py-2.5 bg-[#4C6444] text-white rounded-xl text-sm font-medium hover:bg-[#394c33] transition flex items-center space-x-2 shadow">
                 <i data-lucide="chevron-left" class="w-4 h-4"></i><span>Anterior</span>
               </button>
@@ -1119,7 +1117,7 @@
       applyTheme();
       render();
       setTimeout(() => {
-        loadDataFromFirebase();
+        initFirebaseSync();
       }, 150);
     });
   </script>
