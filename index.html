@@ -164,21 +164,6 @@
   </div>
 
   <!-- ==========================================
-      MODAL DE SELEÇÃO DE CAPA DA GALERIA
-      ========================================== -->
-  <div id="galleryPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 hidden backdrop-blur-md">
-    <div class="bg-[#F4EFE6] dark:bg-[#16221d] rounded-3xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#CFBB99] dark:border-[#263830]">
-      <div class="flex items-center justify-between pb-4 border-b border-[#CFBB99] dark:border-[#263830]">
-        <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Selecione uma imagem da Galeria para Capa</h3>
-        <button onclick="closeGalleryPicker()" class="p-2 text-gray-500 hover:text-red-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div id="galleryPickerGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-4 py-4 overflow-y-auto flex-1">
-        <!-- Preenchido dinamicamente -->
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================
       MODAL DE FOTO EM TELA CHEIA
       ========================================== -->
   <div id="photoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 hidden backdrop-blur-md" onclick="closePhotoModal()">
@@ -201,6 +186,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
     import { getDatabase, ref, set, get, remove, child } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
+    // Your web app's Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyD_CIISlRS5yyjXM26Z07Po7YlNMAq2tdY",
       authDomain: "muse-literario-digital.firebaseapp.com",
@@ -211,6 +197,7 @@
       appId: "1:29538710467:web:a802fc2ae5c7b710a14376"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
@@ -370,7 +357,6 @@
         closeMobileMenu();
         closePdfReader();
         closePhotoModal();
-        closeGalleryPicker();
       }
     });
 
@@ -603,7 +589,7 @@
             </div>
           </div>
           <div class="p-6">
-            <div class="text-xs text-[#889063] font-bold mb-1">${escapeHtml(item.date)} • ${escapeHtml(item.project)}</div>
+            <div class="text-xs text-[#889063] font-bold mb-1">${escapeHtml(item.date)} •${escapeHtml(item.project)}</div>
             <h3 class="font-serif font-bold text-xl text-[#102820] dark:text-[#F4ECD8]">${escapeHtml(item.title)}</h3>
             <p class="text-xs sm:text-sm text-[#4D2D18] dark:text-[#d1bfa7] mt-2 line-clamp-2">${escapeHtml(item.description)}</p>
           </div>
@@ -658,7 +644,7 @@
               <p class="text-xs text-[#4D2D18] dark:text-[#bca282]">Insira a chave de acesso administrativo</p>
             </div>
             <form onsubmit="handleAdminLogin(event)" class="space-y-4">
-              <input id="adminPassInput" type="password" placeholder="Senha (admin123)..." class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-2xl px-4 py-3 text-sm focus:outline-none" required>
+              <input id="adminPassInput" type="password" placeholder="Digite sua senha..." class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-2xl px-4 py-3 text-sm focus:outline-none" required>
               <button type="submit" class="w-full bg-[#102820] dark:bg-[#20362e] text-white py-3 rounded-2xl font-medium text-sm shadow-lg">Entrar</button>
             </form>
           </div>
@@ -718,12 +704,13 @@
               <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
               <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
               
-              <!-- Seletor de Capa com botão Galeria -->
-              <div class="space-y-1">
-                <div class="flex gap-2">
-                  <input id="fCover" placeholder="URL da Capa da Obra" class="flex-1 bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
-                  <button type="button" onclick="openGalleryPicker()" class="bg-[#889063] hover:bg-[#6f764e] text-white px-3 py-2 rounded-xl text-xs font-semibold shrink-0">Galeria</button>
+              <!-- Seletor de Capa com escolha da galeria do celular/computador -->
+              <div class="space-y-1 bg-white dark:bg-[#101915] p-3 rounded-xl border border-[#CFBB99] dark:border-[#263830]">
+                <label class="text-[11px] font-bold text-[#4C6444] dark:text-[#889063] block">Capa do Livro (Galeria do Aparelho ou URL)</label>
+                <div class="flex gap-2 mb-2">
+                  <input id="fCover" placeholder="URL da Capa ou arquivo selecionado" class="flex-1 bg-gray-50 dark:bg-black text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3 py-2 text-xs focus:outline-none">
                 </div>
+                <input type="file" id="fCoverFile" accept="image/*" onchange="handleCoverFileSelect(event)" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#889063] file:text-white hover:file:bg-[#6f764e] cursor-pointer">
               </div>
 
               <!-- Seletor de PDF para converter em Obra -->
@@ -752,28 +739,16 @@
       `;
     }
 
-    function openGalleryPicker() {
-      const grid = document.getElementById('galleryPickerGrid');
-      if (!grid) return;
-      grid.innerHTML = state.gallery.map(item => `
-        <div onclick="selectCoverFromGallery('${escapeHtml(item.imageUrl)}')" class="cursor-pointer rounded-2xl overflow-hidden border-2 border-transparent hover:border-[#4C6444] transition aspect-video bg-black/10 relative group">
-          <img src="${escapeHtml(item.imageUrl)}" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold p-2 text-center">
-            ${escapeHtml(item.title)}
-          </div>
-        </div>
-      `).join('');
-      document.getElementById('galleryPickerModal').classList.remove('hidden');
-    }
+    function handleCoverFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    function closeGalleryPicker() {
-      document.getElementById('galleryPickerModal').classList.add('hidden');
-    }
-
-    function selectCoverFromGallery(url) {
-      const coverInput = document.getElementById('fCover');
-      if (coverInput) coverInput.value = url;
-      closeGalleryPicker();
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64String = e.target.result;
+        document.getElementById('fCover').value = base64String;
+      };
+      reader.readAsDataURL(file);
     }
 
     async function handlePdfFileSelect(event) {
@@ -913,11 +888,12 @@
     function handleAdminLogin(e) {
       e.preventDefault();
       const inputPass = document.getElementById('adminPassInput').value;
-      if (inputPass === 'admin123') {
+      const senhaSecreta = "admin123";
+      if (inputPass === senhaSecreta) {
         state.isAdminAuth = true;
         render();
       } else {
-        alert('Senha incorreta! Use: admin123');
+        alert('Senha incorreta!');
       }
     }
 
