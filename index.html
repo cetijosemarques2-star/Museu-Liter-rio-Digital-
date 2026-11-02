@@ -188,19 +188,19 @@
 
     // Sua configuração oficial do Firebase
     const firebaseConfig = {
-      apiKey: "AIzaSyD_CIISlRS5yyjXM26Z07Po7YlNMAq2tdY",
-      authDomain: "muse-literario-digital.firebaseapp.com",
-      databaseURL: "https://muse-literario-digital-default-rtdb.firebaseio.com",
-      projectId: "muse-literario-digital",
-      storageBucket: "muse-literario-digital.firebasestorage.app",
-      messagingSenderId: "29538710467",
-      appId: "1:29538710467:web:a802fc2ae5c7b710a14376"
+      apiKey: "AIzaSyAIPCwZf_LyCU1OX3OLgtNus4yNTk9Z3Ng",
+      authDomain: "museu-literario-digital.firebaseapp.com",
+      databaseURL: "https://museu-literario-digital-default-rtdb.firebaseio.com",
+      projectId: "museu-literario-digital",
+      storageBucket: "museu-literario-digital.firebasestorage.app",
+      messagingSenderId: "23915585704",
+      appId: "1:23915585704:web:23fc6460da3c35ac86a29d"
     };
 
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    // Disponibiliza as ferramentas do Firebase globalmente de forma limpa
+    // Disponibiliza as ferramentas do Firebase globalmente
     window.dbAPI = {
       database,
       ref,
@@ -221,7 +221,7 @@
         author: 'Mariana Silva',
         synopsis: 'Uma coletânea sensível de crônicas sobre a infância no interior, os cheiros da terra molhada, as tardes de outono e a sabedoria dos antigos.',
         category: 'Crônica',
-        year: '2025',
+        year: '2026',
         coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
         pdfUrl: '',
         externalLink: '',
@@ -1038,7 +1038,7 @@
 
             <div id="pageContentText" class="flex-1 font-serif text-lg sm:text-2xl leading-relaxed space-y-4 my-auto"></div>
 
-            <div class="pt-6 border-t border-[#dcd0bc] dark:borderdark:border-[#263830] flex justify-between items-center mt-6 shrink-0">
+            <div class="pt-6 border-t border-[#dcd0bc] dark:border-[#263830] flex justify-between items-center mt-6 shrink-0">
               <button onclick="changePage(-1)" class="px-5 py-2.5 bg-[#4C6444] text-white rounded-xl text-sm font-medium hover:bg-[#394c33] transition flex items-center space-x-2 shadow">
                 <i data-lucide="chevron-left" class="w-4 h-4"></i><span>Anterior</span>
               </button>
