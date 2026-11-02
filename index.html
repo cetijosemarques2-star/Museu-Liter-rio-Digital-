@@ -153,6 +153,10 @@
         <p id="readerBookAuthor" class="text-xs opacity-75 truncate">Autor</p>
       </div>
       <div class="flex items-center space-x-3 shrink-0">
+        <div id="readerModeToggle" class="hidden sm:flex bg-black/40 p-1 rounded-xl">
+          <button onclick="setReaderMode('museum')" id="btnModeMuseum" class="px-3 py-1 rounded-lg text-xs font-semibold bg-[#4C6444] text-white transition">Leitor do Museu</button>
+          <button onclick="setReaderMode('pdf')" id="btnModePdf" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-300 transition">Arquivo PDF Original</button>
+        </div>
         <span id="pageIndicator" class="hidden sm:inline-block text-xs font-mono bg-black/30 px-3 py-1 rounded-lg">Página 1 de 3</span>
         <button onclick="closePdfReader()" id="closeReaderBtn" class="bg-red-600 text-white p-2.5 rounded-xl hover:bg-red-700 transition flex items-center justify-center">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -200,7 +204,6 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    // Disponibiliza as ferramentas do Firebase globalmente
     window.dbAPI = {
       database,
       ref,
@@ -223,7 +226,7 @@
         category: 'Crônica',
         year: '2026',
         coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
-        pdfUrl: '',
+        pdfBase64: '',
         externalLink: '',
         status: 'published',
         featured: true,
@@ -245,6 +248,7 @@
       selectedBookId: null,
       currentPage: 1,
       totalPages: 1,
+      currentReadingMode: 'museum', // 'museum' ou 'pdf'
       isDarkMode: localStorage.getItem('museu_dark') === 'true',
       books: defaultBooks,
       categories: ['Conto', 'Crônica', 'Poesia', 'Literatura nordestina', 'Produção escolar', 'Romance'],
@@ -268,7 +272,6 @@
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    // Carregamento e sincronização em tempo real via Firebase Realtime Database
     function initFirebaseSync() {
       if (!window.dbAPI) return;
       const { database, ref, onValue } = window.dbAPI;
@@ -528,7 +531,7 @@
       const book = state.books.find(b => b.id === state.selectedBookId);
       if (!book) return `<div class="p-16 text-center text-[#102820] dark:text-[#E5D7C4]">Obra não encontrada. <button onclick="switchTab('catalog')" class="text-[#4C6444] underline">Voltar</button></div>`;
 
-      const hasContent = (book.pdfUrl && book.pdfUrl.length > 5) || (book.pages && book.pages.length > 0) || (book.externalLink && book.externalLink.length > 5);
+      const hasContent = (book.pdfBase64 && book.pdfBase64.length > 5) || (book.pages && book.pages.length > 0) || (book.externalLink && book.externalLink.length > 5);
 
       return `
         <div class="p-6 sm:p-10 lg:p-16 max-w-5xl mx-auto space-y-8 pb-36 lg:pb-16">
@@ -697,7 +700,7 @@
               <input id="fYear" placeholder="Ano (ex: 2026)" value="2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
               <textarea id="fSynopsis" placeholder="Sinopse" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
               
-              <!-- Seletor de Capa com escolha da galeria do celular/computador -->
+              <!-- Seletor de Capa com escolha da galeria -->
               <div class="space-y-1 bg-white dark:bg-[#101915] p-3 rounded-xl border border-[#CFBB99] dark:border-[#263830]">
                 <label class="text-[11px] font-bold text-[#4C6444] dark:text-[#889063] block">Capa do Livro (Galeria do Aparelho ou URL)</label>
                 <div class="flex gap-2 mb-2">
@@ -706,11 +709,12 @@
                 <input type="file" id="fCoverFile" accept="image/*" onchange="handleCoverFileSelect(event)" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#889063] file:text-white hover:file:bg-[#6f764e] cursor-pointer">
               </div>
 
-              <!-- Seletor de PDF para converter em Obra -->
+              <!-- Seletor de PDF para conversão e leitura nativa/original -->
               <div class="space-y-1 bg-white dark:bg-[#101915] p-3 rounded-xl border border-[#CFBB99] dark:border-[#263830]">
-                <label class="text-[11px] font-bold text-[#4C6444] dark:text-[#889063] block">Importar Arquivo PDF (Converter em Obra)</label>
+                <label class="text-[11px] font-bold text-[#4C6444] dark:text-[#889063] block">Importar Arquivo PDF (Leitor Original e Museu)</label>
                 <input type="file" id="fPdfFile" accept="application/pdf" onchange="handlePdfFileSelect(event)" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#4C6444] file:text-white hover:file:bg-[#394c33] cursor-pointer">
-                <p id="pdfStatusMsg" class="text-[10px] text-gray-400 mt-1">O PDF será lido e transformado em páginas para leitura no leitor do museu.</p>
+                <input type="hidden" id="fPdfBase64">
+                <p id="pdfStatusMsg" class="text-[10px] text-gray-400 mt-1">O PDF será convertido para leitura no museu e ficará disponível para ler a versão original com animação de páginas.</p>
               </div>
 
               <input id="fExternalLink" placeholder="Link externo opcional (Drive, YouTube, etc)" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
@@ -748,10 +752,16 @@
       if (!file) return;
 
       const statusMsg = document.getElementById('pdfStatusMsg');
-      statusMsg.textContent = "Lendo e convertendo PDF em obra literária...";
+      statusMsg.textContent = "Lendo e convertendo PDF...";
       statusMsg.className = "text-[10px] text-amber-600 font-semibold mt-1";
 
       try {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('fPdfBase64').value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
         const pdfDoc = await loadingTask.promise;
@@ -767,7 +777,7 @@
         }
 
         if (extractedPages.length === 0) {
-          extractedPages = ["Documento PDF convertido sem texto extraível direto."];
+          extractedPages = ["Documento PDF sem texto extraível direto."];
         }
 
         document.getElementById('fPages').value = extractedPages.join('\n\n');
@@ -777,11 +787,11 @@
           titleInput.value = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
         }
 
-        statusMsg.textContent = `PDF convertido com sucesso! (${pdfDoc.numPages} páginas estruturadas).`;
+        statusMsg.textContent = `PDF pronto! (${pdfDoc.numPages} páginas estruturadas).`;
         statusMsg.className = "text-[10px] text-emerald-600 font-semibold mt-1";
       } catch (err) {
         console.error("Erro ao converter PDF:", err);
-        statusMsg.textContent = "Erro ao processar o arquivo PDF. Tente outro arquivo.";
+        statusMsg.textContent = "Erro ao processar o PDF.";
         statusMsg.className = "text-[10px] text-red-600 font-semibold mt-1";
       }
     }
@@ -806,7 +816,14 @@
             <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Fotografia</h3>
             <form id="galleryForm" onsubmit="handleSaveGallery(event)" class="space-y-3">
               <input id="gTitle" placeholder="Título da Foto *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
-              <input id="gImageUrl" placeholder="URL da Imagem *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
+              
+              <!-- Seletor de Foto da Galeria do Aparelho ou URL -->
+              <div class="space-y-1 bg-white dark:bg-[#101915] p-3 rounded-xl border border-[#CFBB99] dark:border-[#263830]">
+                <label class="text-[11px] font-bold text-[#4C6444] dark:text-[#889063] block">Imagem da Foto (Galeria do Aparelho ou URL)</label>
+                <input id="gImageUrl" placeholder="URL da Imagem ou arquivo selecionado" class="w-full bg-gray-50 dark:bg-black text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3 py-2 text-xs focus:outline-none mb-2">
+                <input type="file" id="gImageFile" accept="image/*" onchange="handleGalleryFileSelect(event)" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#889063] file:text-white hover:file:bg-[#6f764e] cursor-pointer">
+              </div>
+
               <input id="gDate" placeholder="Data (ex: Outubro, 2026)" value="Outubro, 2026" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
               <input id="gProject" placeholder="Projeto / Categoria (ex: Mostra)" value="Mostra" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
               <textarea id="gDesc" placeholder="Descrição da foto" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none h-20"></textarea>
@@ -819,6 +836,16 @@
           </div>
         </div>
       `;
+    }
+
+    function handleGalleryFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('gImageUrl').value = e.target.result;
+      };
+      reader.readAsDataURL(file);
     }
 
     function renderAdminVideos() {
@@ -835,7 +862,7 @@
       return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div class="bg-[#F4EFE6] dark:bg-[#16221d] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#CFBB99] dark:border-[#263830] space-y-4">
-            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Vídeo</h3>
+            <h3 class="font-serif font-bold text-lg text-[#102820] dark:text-[#E5D7C4]">Cadastrar Link de Vídeo</h3>
             <form id="videoForm" onsubmit="handleSaveVideo(event)" class="space-y-3">
               <input id="vTitle" placeholder="Título do Vídeo *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
               <input id="vUrl" placeholder="URL do YouTube Embed (ex: https://www.youtube.com/embed/...) *" class="w-full bg-white dark:bg-[#101915] text-[#102820] dark:text-[#E5D7C4] border border-[#CFBB99] dark:border-[#263830] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required>
@@ -902,7 +929,7 @@
         year: document.getElementById('fYear').value || '2026',
         synopsis: document.getElementById('fSynopsis').value,
         coverUrl: document.getElementById('fCover').value || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
-        pdfUrl: '',
+        pdfBase64: document.getElementById('fPdfBase64').value || '',
         externalLink: document.getElementById('fExternalLink').value.trim(),
         status: 'published',
         featured: document.getElementById('fFeatured').checked,
@@ -914,7 +941,7 @@
       const newRef = push(ref(database, 'books'));
       await set(newRef, newBook);
 
-      alert('Obra convertida e cadastrada com sucesso no acervo!');
+      alert('Obra cadastrada com sucesso!');
       document.getElementById('bookForm').reset();
       render();
     }
@@ -1021,13 +1048,33 @@
       document.getElementById('readerBookTitle').textContent = book.title;
       document.getElementById('readerBookAuthor').textContent = book.author;
 
-      const bodyContainer = document.getElementById('readerBodyContainer');
-      bodyContainer.innerHTML = '';
+      const toggleElem = document.getElementById('readerModeToggle');
+      if (book.pdfBase64 && book.pdfBase64.length > 5) {
+        toggleElem.style.display = 'flex';
+        setReaderMode('museum');
+      } else {
+        toggleElem.style.display = 'none';
+        setReaderMode('museum');
+      }
 
-      if (book.pages && book.pages.length > 0) {
+      document.getElementById('pdfReaderModal').classList.remove('hidden');
+      document.getElementById('closeReaderBtn').focus();
+    }
+
+    function setReaderMode(mode) {
+      state.currentReadingMode = mode;
+      const btnMuseum = document.getElementById('btnModeMuseum');
+      const btnPdf = document.getElementById('btnModePdf');
+      const bodyContainer = document.getElementById('readerBodyContainer');
+      const book = state.currentReadingBook;
+
+      if (mode === 'museum') {
+        if(btnMuseum) btnMuseum.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-[#4C6444] text-white transition";
+        if(btnPdf) btnPdf.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-300 transition";
+        
         document.getElementById('pageIndicator').style.display = 'inline-block';
         state.currentPage = 1;
-        state.totalPages = book.pages.length;
+        state.totalPages = book.pages ? book.pages.length : 1;
 
         bodyContainer.innerHTML = `
           <div id="bookPageContainer" class="page-flip w-full h-full max-w-4xl bg-[#F9F3EA] dark:bg-[#141c19] text-[#2c221a] dark:text-[#E5D7C4] p-6 sm:p-16 rounded-2xl shadow-2xl border-l-8 border-[#102820] dark:border-[#263830] flex flex-col justify-between overflow-y-auto">
@@ -1035,9 +1082,7 @@
               <span class="font-serif italic text-sm text-[#8A6240] dark:text-[#bca282] truncate pr-2">${escapeHtml(book.title)}</span>
               <span class="text-xs text-gray-500 dark:text-gray-400 font-mono shrink-0" id="topPageNum">1</span>
             </div>
-
             <div id="pageContentText" class="flex-1 font-serif text-lg sm:text-2xl leading-relaxed space-y-4 my-auto"></div>
-
             <div class="pt-6 border-t border-[#dcd0bc] dark:border-[#263830] flex justify-between items-center mt-6 shrink-0">
               <button onclick="changePage(-1)" class="px-5 py-2.5 bg-[#4C6444] text-white rounded-xl text-sm font-medium hover:bg-[#394c33] transition flex items-center space-x-2 shadow">
                 <i data-lucide="chevron-left" class="w-4 h-4"></i><span>Anterior</span>
@@ -1051,11 +1096,18 @@
         `;
         updateReaderPageContent();
       } else {
-        bodyContainer.innerHTML = `<div class="text-center text-white p-8">O conteúdo desta obra ainda não está disponível para leitura.</div>`;
-      }
+        if(btnMuseum) btnMuseum.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-300 transition";
+        if(btnPdf) btnPdf.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-[#4C6444] text-white transition";
+        
+        document.getElementById('pageIndicator').style.display = 'none';
 
-      document.getElementById('pdfReaderModal').classList.remove('hidden');
-      document.getElementById('closeReaderBtn').focus();
+        bodyContainer.innerHTML = `
+          <div class="w-full h-full bg-black rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
+            <iframe src="${book.pdfBase64}" class="w-full h-full border-0" title="${escapeHtml(book.title)}"></iframe>
+          </div>
+        `;
+      }
+      if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     function closePdfReader() {
